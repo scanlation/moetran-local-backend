@@ -324,6 +324,9 @@ class ProjectOCRAPI(MoeAPIView):
 
         }
         """
+        # 暂时关闭OCR相关接口
+        raise NoPermissionError(gettext("团队限额不足"))
+        """
         # 检查用户权限
         if not self.current_user.can(project.team, TeamPermission.USE_OCR_QUOTA):
             raise NoPermissionError(gettext("您没有此项目所在团队使用自动标记限额的权限"))
@@ -341,6 +344,7 @@ class ProjectOCRAPI(MoeAPIView):
         images.update(parse_status=ParseStatus.QUEUING)
         ocr("project", str(project.id))
         return {"message": gettext("已开始自动标记")}
+        """
 
 
 # TODO： 准备删掉这个 api

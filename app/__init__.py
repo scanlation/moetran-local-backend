@@ -55,12 +55,13 @@ def create_app():
     oss.init(app.config)  # 文件储存
 
     # 检测 env_files 是否挂载成功
+    """
     logger.info("-" * 50)
     json_exists = os.path.exists(
         app.config["GOOGLE_STORAGE_MOEFLOW_VISION_TMP"]["JSON"]
     )
     logger.info(f"挂载 env_files：{json_exists}")
-
+    """
     # from app.tasks.ocr import recover_ocr_tasks
 
     # recover_ocr_tasks()
@@ -95,13 +96,13 @@ def create_celery():
             "app.tasks.email",
             "app.tasks.file_parse",
             "app.tasks.output_project",
-            "app.tasks.ocr",
+            # "app.tasks.ocr",
             "app.tasks.import_from_labelplus"
         ],
         related_name=None,
     )
     celery.conf.task_routes = {
-        "tasks.ocr_task": {"queue": "ocr"},
+        # "tasks.ocr_task": {"queue": "ocr"},
         "tasks.output_project_task": {"queue": "output"},
         "tasks.import_from_labelplus_task": {"queue": "output"},
     }
