@@ -36,7 +36,7 @@ def aliyun_cdn_url_auth_c(uri, key, exp):
 
 class OSS:
     def __init__(self, config=None):
-        if config:
+        if config and config["FILE_CACHE_TYPE"] == "oss":
             self.init(config)
         else:
             self.auth = None
@@ -46,16 +46,17 @@ class OSS:
             self.cdn_url_key = None
 
     def init(self, config):
-        """配置初始化"""
-        self.auth = oss2.Auth(
-            config["OSS_ACCESS_KEY_ID"], config["OSS_ACCESS_KEY_SECRET"],
-        )
-        self.bucket = oss2.Bucket(
-            self.auth, config["OSS_ENDPOINT"], config["OSS_BUCKET_NAME"],
-        )
-        self.oss_domain = config["OSS_DOMAIN"]
-        self.oss_via_cdn = config["OSS_VIA_CDN"]
-        self.cdn_url_key = config["CDN_URL_KEY_A"]
+        if config["FILE_CACHE_TYPE"] == "oss":
+            # 配置初始化
+            self.auth = oss2.Auth(
+                config["OSS_ACCESS_KEY_ID"], config["OSS_ACCESS_KEY_SECRET"],
+            )
+            self.bucket = oss2.Bucket(
+                self.auth, config["OSS_ENDPOINT"], config["OSS_BUCKET_NAME"],
+            )
+            self.oss_domain = config["OSS_DOMAIN"]
+            self.oss_via_cdn = config["OSS_VIA_CDN"]
+            self.cdn_url_key = config["CDN_URL_KEY_A"]
 
     def upload(self, path, filename, file, headers=None, progress_callback=None):
         """上传文件"""

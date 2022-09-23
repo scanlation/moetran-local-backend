@@ -101,6 +101,7 @@ gen
 /logs/log.txt
 /docs/
 /file/tmp/*
+/app/static/files/*
 
 # VSCode project files
 /.vscode

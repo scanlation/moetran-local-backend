@@ -21,7 +21,7 @@ from mongoengine import (
     StringField,
 )
 
-from app import oss
+from app import fileStorage
 from app.core.responses import MoePagination
 from app.decorators.file import need_activated, only, only_file
 from app.exceptions import (
@@ -570,7 +570,7 @@ class File(Document):
     def url(self):
         if not self.save_name:
             return ""
-        return oss.sign_url(current_app.config["OSS_FILE_PREFIX"], self.save_name)
+        return fileStorage.sign_url("project", self.save_name)
 
     @only_file
     def has_real_file(self):
@@ -582,8 +582,8 @@ class File(Document):
         # 从oss获取源文件
         if not self.save_name:
             raise SourceFileNotExist(self.file_not_exist_reason)
-        return oss.download(
-            current_app.config["OSS_FILE_PREFIX"], self.save_name, local_path=local_path
+        return fileStorage.download(
+            "project", self.save_name, local_path=local_path
         )
 
     @only_file
@@ -608,8 +608,8 @@ class File(Document):
         # 文件大小
         file_size = math.ceil(get_file_size(real_file))  # 获取文件大小，去掉小数
         # 将文件上传到OSS
-        oss_result = oss.upload(
-            current_app.config["OSS_FILE_PREFIX"], save_name, real_file
+        oss_result = fileStorage.upload(
+            "project", save_name, real_file
         )
         # 替换原存储名和md5
         self.update(save_name=save_name, md5=md5)
@@ -647,9 +647,14 @@ class File(Document):
         # 如果是文件夹则跳过
         if self.has_real_file:
             # 物理删除源文件
-            oss_result = oss.delete(
-                current_app.config["OSS_FILE_PREFIX"], self.save_name
-            )
+            try:
+                oss_result = fileStorage.delete(
+                    "project", self.save_name
+                )
+            except PermissionError as e:
+                oss_result = e
+                pass
+
             # 初始化对象，并更新缓存计数
             if init_obj:
                 self.update(

@@ -9,15 +9,14 @@ from os import environ as env
 # -----------
 APP_NAME = "moeflow"
 SECRET_KEY = env["SECRET_KEY"]
-DEBUG = False
+DEBUG = True
 TESTING = False
 MAX_CONTENT_LENGTH = 20 * 1024 * 1024
 # -----------
 # Mongo 数据库
 # -----------
 DB_URI = (
-    f"mongodb://{env['MONGO_USER']}:{env['MONGO_PASS']}"
-    + f"@mongo:27017/{APP_NAME}?authSource=admin"
+    f"{env['MONGODB_URL']}/{APP_NAME}?authSource=admin"
 )
 # -----------
 # i18n
@@ -38,32 +37,47 @@ PLAN_DELETE_DELTA = 7 * 24 * 60 * 60  # 计划删除延时时间
 DEFAULT_USER_AVATAR = None
 DEFAULT_TEAM_AVATAR = None
 # -----------
+# 文件上传相关设置
+# local = 本地文件
+# oss = 阿里云OSS
+# -----------
+FILE_CACHE_TYPE = env.get("FILE_CACHE_TYPE", "local")
+# -----------
+# 本地文件存储相关
+# -----------
+if FILE_CACHE_TYPE == "local":
+    FILE_PREFIX = "files/"
+    USER_AVATAR_PREFIX = "avatars/user/"
+    TEAM_AVATAR_PREFIX = "avatars/team/"
+# -----------
 # OSS
 # -----------
-OSS_ACCESS_KEY_ID = env["OSS_ACCESS_KEY_ID"]
-OSS_ACCESS_KEY_SECRET = env["OSS_ACCESS_KEY_SECRET"]
-OSS_ENDPOINT = "https://oss-cn-shanghai-internal.aliyuncs.com/"  # 线上需要修改成内网端点
-OSS_BUCKET_NAME = "moeflow"
-# OSS_DOMAIN 可能绑定在 CDN 来加速 OSS，并开启了 CDN 的[阿里云 OSS 私有 Bucket 回源]和[URL 鉴权]，
-# 此时需要设置 OSS_VIA_CDN = True，将通过 CDN 的 URL 鉴权方式来生成 URL，而不用 OSS 的 URL 签名
-OSS_VIA_CDN = False
-# CDN URL 鉴权主/备 KEY
-CDN_URL_KEY_A = env["CDN_URL_KEY_A"]
-CDN_URL_KEY_B = env["CDN_URL_KEY_B"]  # 备 KEY 暂未用到
-# 用户自定义域名（未设置则填写阿里云提供的 OSS 域名）
-OSS_DOMAIN = "https://data.moeflow.com/"
-# -----------
-# 内容安全
-# -----------
-SAFE_ACCESS_KEY_ID = "-"
-SAFE_ACCESS_KEY_SECRET = "-"
-# -----------
-# 各类储存前缀
-# -----------
-OSS_FILE_PREFIX = "files/"
-OSS_OUTPUT_PREFIX = "outputs/"
-OSS_USER_AVATAR_PREFIX = "user-avatars/"
-OSS_TEAM_AVATAR_PREFIX = "team-avatars/"
+if FILE_CACHE_TYPE == "oss":
+    OSS_ACCESS_KEY_ID = env["OSS_ACCESS_KEY_ID"]
+    OSS_ACCESS_KEY_SECRET = env["OSS_ACCESS_KEY_SECRET"]
+    OSS_ENDPOINT = env["OSS_ENDPOINT"]  # 线上需要修改成内网端点
+    OSS_BUCKET_NAME = env["OSS_BUCKET_NAME"]
+    # OSS_DOMAIN 可能绑定在 CDN 来加速 OSS，并开启了 CDN 的[阿里云 OSS 私有 Bucket 回源]和[URL 鉴权]，
+    # 此时需要设置 OSS_VIA_CDN = True，将通过 CDN 的 URL 鉴权方式来生成 URL，而不用 OSS 的 URL 签名
+    OSS_VIA_CDN = False
+    # CDN URL 鉴权主/备 KEY
+    CDN_URL_KEY_A = env["CDN_URL_KEY_A"]
+    CDN_URL_KEY_B = env["CDN_URL_KEY_B"]  # 备 KEY 暂未用到
+    # 用户自定义域名（未设置则填写阿里云提供的 OSS 域名）
+    OSS_DOMAIN = env["OSS_DOMAIN"]
+    # -----------
+    # 内容安全
+    # -----------
+    SAFE_ACCESS_KEY_ID = "-"
+    SAFE_ACCESS_KEY_SECRET = "-"
+    # -----------
+    # 各类储存前缀
+    # -----------
+    OSS_FILE_PREFIX = "files/"
+    OSS_OUTPUT_PREFIX = "outputs/"
+    OSS_USER_AVATAR_PREFIX = "user-avatars/"
+    OSS_TEAM_AVATAR_PREFIX = "team-avatars/"
+"""
 # -----------
 # 谷歌接口
 # -----------
@@ -87,23 +101,23 @@ GOOGLE_STORAGE_MOEFLOW_VISION_TMP = {
     "BUCKET_NAME": "moeflow",
     "GS_URL": "gs://moeflow",
 }
+"""
 # -----------
 # EMAIL SMTP
 # -----------
-EMAIL_SMTP_HOST = "smtpdm.aliyun.com"
+EMAIL_SMTP_HOST = "smtp.aliyun.com"
 EMAIL_SMTP_PORT = 465
 EMAIL_USE_SSL = True
-EMAIL_ADDRESS = "no-reply@mail.moeflow.com"
-EMAIL_USERNAME = "MoeFlow"
-EMAIL_PASSWORD = env["EMAIL_PASSWORD"]
-EMAIL_REPLY_ADDRESS = "reply@moeflow.com"
-EMAIL_ERROR_ADDRESS = "error@moeflow.com"
+EMAIL_ADDRESS = env.get("EMAIL_ADDRESS", "no-reply@moetran.com")
+EMAIL_USERNAME = env.get("EMAIL_USERNAME", "")
+EMAIL_PASSWORD = env.get("EMAIL_PASSWORD", "")
+EMAIL_REPLY_ADDRESS = env.get("EMAIL_ADDRESS", "admin@moetran.com")
+EMAIL_ERROR_ADDRESS = env.get("EMAIL_ADDRESS", "admin@moetran.com")
 # -----------
 # Celery
 # -----------
 CELERY_BROKER_URL = (
-    f"amqp://{env['RABBITMQ_USER']}:{env['RABBITMQ_PASS']}"
-    + f"@rabbitmq:5672/{APP_NAME}"
+    f"{env['RABBITMQ_URL']}/{APP_NAME}"
 )
 CELERY_BACKEND_URL = DB_URI
 CELERY_MONGODB_BACKEND_SETTINGS = {
@@ -122,3 +136,13 @@ APIKIT_ACCESS_CONTROL_ALLOW_HEADERS = [
     "Content-Type",
     "X-Requested-With",
 ]
+
+# -----------
+# 配置可访问域名
+# -----------
+allow_origin = env.get("ALLOW_ORIGIN", "*")
+if allow_origin == "*":
+    APIKIT_ACCESS_CONTROL_ALLOW_ORIGIN = allow_origin
+elif allow_origin.count(',') > 0:
+    allow_origins = allow_origin.split(',')
+    APIKIT_ACCESS_CONTROL_ALLOW_ORIGIN = allow_origins

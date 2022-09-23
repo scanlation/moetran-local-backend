@@ -75,6 +75,23 @@ def configure_logger(app):
         """
     )
 
+    # 设置了LOG_PATH则使用,否则使用默认的logs文件夹
+    if app.config.get("LOG_PATH"):
+        log_path = app.config.get("LOG_PATH")
+        log_folder = os.path.dirname(log_path)
+    else:
+        log_folder = "./logs"
+        log_file = "log.txt"
+        log_path = os.path.join(log_folder, log_file)
+    # 不存在记录文件夹自动创建
+    if not os.path.isdir(log_folder):
+        os.makedirs(log_folder)
+    
+    # === 文件输出 ===
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setLevel(logging.WARNING)
+    file_handler.setFormatter(file_formatter)
+
     if app.config["DEBUG"]:
         # 控制台输出
         stream_handler = logging.StreamHandler()
@@ -84,31 +101,13 @@ def configure_logger(app):
         else:
             stream_handler.setLevel(logging.DEBUG)
         stream_handler.setFormatter(stream_formatter)  # 格式设置
-        # 附加到logger
-        logger.addHandler(stream_handler)
-        app.logger.addHandler(stream_handler)
     else:
-        # 设置了LOG_PATH则使用,否则使用默认的logs文件夹
-        if app.config.get("LOG_PATH"):
-            log_path = app.config.get("LOG_PATH")
-            log_folder = os.path.dirname(log_path)
-        else:
-            log_folder = "./logs"
-            log_file = "log.txt"
-            log_path = os.path.join(log_folder, log_file)
-        # 不存在记录文件夹自动创建
-        if not os.path.isdir(log_folder):
-            os.makedirs(log_folder)
-
         # === 控制台输出 ===
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.INFO)
         stream_handler.setFormatter(stream_formatter)
 
-        # === 文件输出 ===
-        file_handler = logging.FileHandler(log_path)
-        file_handler.setLevel(logging.WARNING)
-        file_handler.setFormatter(file_formatter)
+        
 
         # === 邮件输出 ===
         mail_handler = SMTPSSLHandler(
@@ -123,10 +122,11 @@ def configure_logger(app):
         )
         mail_handler.setLevel(logging.ERROR)
         mail_handler.setFormatter(mail_formatter)
-        # 附加到logger
-        logger.addHandler(stream_handler)
-        logger.addHandler(file_handler)
         logger.addHandler(mail_handler)
-        app.logger.addHandler(stream_handler)
-        app.logger.addHandler(file_handler)
         app.logger.addHandler(mail_handler)
+    # 附加到logger
+    logger.addHandler(stream_handler)
+    logger.addHandler(file_handler)
+    app.logger.addHandler(stream_handler)
+    app.logger.addHandler(file_handler)
+

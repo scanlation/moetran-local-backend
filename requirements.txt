@@ -3,23 +3,23 @@ Jinja2==3.0.3
 itsdangerous==2.0.1
 werkzeug==2.0.2
 flask-apikit==0.0.6
-gunicorn==20.0.4  # Éú²ú»·¾³·şÎñÆ÷
-pytest==6.1.1  # ²âÊÔ¿ò¼Ü
-pytest-cov==2.7.1  # ²âÊÔ¸²¸ÇÂÊ
-pytest-xdist==1.29.0  # ²¢·¢²âÊÔÖ§³Ö
-flake8==3.8.4  # ´úÂëÖÊÁ¿¼ì²â
-black==19.10b0  # ´úÂë¸ñÊ½»¯
+gunicorn==20.0.4  # ç”Ÿäº§ç¯å¢ƒæœåŠ¡å™¨
+pytest==6.1.1  # æµ‹è¯•æ¡†æ¶
+pytest-cov==2.7.1  # æµ‹è¯•è¦†ç›–ç‡
+pytest-xdist==1.29.0  # å¹¶å‘æµ‹è¯•æ”¯æŒ
+flake8==3.8.4  # ä»£ç è´¨é‡æ£€æµ‹
+black==19.10b0  # ä»£ç æ ¼å¼åŒ–
 flask-babel==1.0.0  # i18n
-mongoengine==0.20.0  # MongoÊı¾İ¿â
-Pillow==8.0.1  # Í¼Æ¬´¦Àí
-marshmallow==3.0.0b8  # ×Ö¶ÎÑéÖ¤
-requests==2.22.0  # HTTPÇëÇó
-oss2==2.7.0  # °¢ÀïÔÆOSS
-celery==5.0.1  # ÈÎÎñµ÷¶È
-flower==0.9.5  # Celery¼à¿Ø
-redis==3.2.1  # RedisÊı¾İ¿â
-chardet==3.0.4  # ÎÄ¼ş±àÂëÔ¤²â
-aliyun-python-sdk-core-v3==2.13.3  # ÓÃÓÚÇ©·¢°¢ÀïÔÆpip
-click==7.0  # ÃüÁîĞĞ¹¤¾ß
-# aliyun-python-sdk-green==3.2.0  # °¢ÀïÔÆÄÚÈİ¼ì²â£¨ÔİÊ±ÓÃ²»µ½£©
+mongoengine==0.20.0  # Mongoæ•°æ®åº“
+Pillow==8.0.1  # å›¾ç‰‡å¤„ç†
+marshmallow==3.0.0b8  # å­—æ®µéªŒè¯
+requests==2.22.0  # HTTPè¯·æ±‚
+oss2==2.7.0  # é˜¿é‡Œäº‘OSS
+celery==5.0.1  # ä»»åŠ¡è°ƒåº¦
+flower==0.9.5  # Celeryç›‘æ§
+redis==3.2.1  # Redisæ•°æ®åº“
+chardet==3.0.4  # æ–‡ä»¶ç¼–ç é¢„æµ‹
+aliyun-python-sdk-core-v3==2.13.3  # ç”¨äºç­¾å‘é˜¿é‡Œäº‘pip
+click==7.0  # å‘½ä»¤è¡Œå·¥å…·
+# aliyun-python-sdk-green==3.2.0  # é˜¿é‡Œäº‘å†…å®¹æ£€æµ‹ï¼ˆæš‚æ—¶ç”¨ä¸åˆ°ï¼‰
 google-cloud-storage==1.33.0

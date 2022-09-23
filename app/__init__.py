@@ -9,6 +9,7 @@ from flask_babel import Babel
 from app.constants.locale import Locale
 from app.services.google_storage import GoogleStorage
 from app.services.oss import OSS
+from app.services.local_file import LocalFile
 from app.utils.logging import configure_logger, logger
 
 from .apis import register_apis
@@ -19,7 +20,9 @@ FILE_PATH = os.path.abspath(os.path.join(APP_PATH, "..", "files"))  # 一般文�
 TMP_PATH = os.path.abspath(os.path.join(FILE_PATH, "tmp"))  # 临时文件存放地址
 # 插件
 babel = Babel()
-oss = OSS()
+oss = None
+localFile = LocalFile()
+fileStorage = localFile
 gs_vision = GoogleStorage()
 apikit = APIKit()
 
@@ -52,7 +55,16 @@ def create_app():
     apikit.init_app(app)
     logger.info("-" * 50)
     logger.info("站点支持语言: " + str([str(i) for i in babel.list_translations()]))
-    oss.init(app.config)  # 文件储存
+    # 文件储存
+    logger.info("-" * 50)
+    logger.info("文件存储方式：" + app.config["FILE_CACHE_TYPE"])
+    if app.config["FILE_CACHE_TYPE"] == "oss":
+        oss = OSS()
+        oss.init(app.config)
+        fileStorage = oss
+    if app.config["FILE_CACHE_TYPE"] == "local":
+        localFile.init(app.config)
+        fileStorage = localFile
 
     # 检测 env_files 是否挂载成功
     """
