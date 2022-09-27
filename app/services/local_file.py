@@ -3,9 +3,10 @@
 """
 import time
 import os
+import shutil
 from flask import url_for
 
-prefix_items = ["user_avatar", "team_avatar", "project", "thumbnail"]
+prefix_items = ["user_avatar", "team_avatar", "project", "thumbnail", "output"]
 
 def getDirName(basePath, filePath=None):
   """
@@ -52,9 +53,25 @@ class LocalFile:
     return os.path.exists(file_path)
   def delete(self, path_type, filename):
     """删除文件"""
-    file_path = "./app/static/{}/{}".format(getattr(self, path_type + "_folder"), filename)
-    return os.remove(file_path)
-
+    if isinstance(filename, list):
+      if len(filename) == 0:
+        return
+      for file in filename:
+        return self.delete(path_type, file)
+    else:
+      file_path = "./app/static/{}/{}".format(getattr(self, path_type + "_folder"), filename)
+      return os.remove(file_path)
+  def download(self, path_type, filename, /, *, local_path=None):
+    file_path = "{}/app/static/{}/{}".format(os.getcwd(), getattr(self, path_type + "_folder"), filename)
+    if local_path:
+      shutil.copy(file_path, local_path)
+    else:
+      return self.sign_url(path_type, filename)
+  def copy_file(self, path_type, filename, from_path):
+    file_path = "{}/app/static/{}/{}".format(os.getcwd(), getattr(self, path_type + "_folder"), filename)
+    if not from_path:
+      pass
+    shutil.copy(from_path, file_path)
 
   def sign_url(self, path_type, filename):
     file_domain = self.file_domain

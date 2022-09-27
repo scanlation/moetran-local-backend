@@ -253,11 +253,13 @@ class ProjectTargetOutputListAPI(MoeAPIView):
             raise TargetNotExistError
         # 如果上一个翻译在5分钟内则禁止再次新增
         last_output = target.outputs().first()
+        """
         if last_output and (
             datetime.datetime.utcnow() - last_output.create_time
             < datetime.timedelta(seconds=60 * 5)
         ):
             raise OutputTooFastError
+        """
         data = self.get_json(CreateOutputSchema())
         # 删除三个导出之前的
         old_targets = target.outputs().skip(2)

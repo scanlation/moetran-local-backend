@@ -7,7 +7,7 @@ from os import environ as env
 # -----------
 # 基础设置
 # -----------
-APP_NAME = "moeflow"
+APP_NAME = "moetran"
 SECRET_KEY = env["SECRET_KEY"]
 DEBUG = True
 TESTING = False
@@ -49,6 +49,7 @@ if FILE_CACHE_TYPE == "local":
     FILE_PREFIX = "files/"
     USER_AVATAR_PREFIX = "avatars/user/"
     TEAM_AVATAR_PREFIX = "avatars/team/"
+    OUTPUT_PREFIX = "output/"
 # -----------
 # OSS
 # -----------

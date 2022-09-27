@@ -9,8 +9,7 @@ from flask import current_app
 from app.utils.logging import logger
 from mongoengine import DateTimeField, Document, IntField, ReferenceField
 from typing import List, TYPE_CHECKING
-import oss2
-from app import oss
+from app import fileStorage
 
 if TYPE_CHECKING:
     from app.models.project import Project
@@ -55,20 +54,16 @@ class Output(Document):
     @classmethod
     def delete_real_files(cls, outputs):
         try:
-            oss.delete(
-                current_app.config["OSS_OUTPUT_PREFIX"],
+            fileStorage.delete(
+                "output",
                 [str(output.id) + ".zip" for output in outputs],
             )
-        except (oss2.exceptions.NoSuchKey) as e:
-            logger.error(e)
         except (Exception) as e:
             logger.error(e)
 
     def delete_real_file(self):
         try:
-            oss.delete(current_app.config["OSS_OUTPUT_PREFIX"], str(self.id) + ".zip")
-        except (oss2.exceptions.NoSuchKey) as e:
-            logger.error(e)
+            fileStorage.delete("output", str(self.id) + ".zip")
         except (Exception) as e:
             logger.error(e)
 
@@ -97,12 +92,12 @@ class Output(Document):
         }
         if self.status == OutputStatus.SUCCEEDED:
             data["link"] = (
-                oss.sign_url(
-                    current_app.config["OSS_OUTPUT_PREFIX"], str(self.id) + ".zip"
+                fileStorage.sign_url(
+                    "output", str(self.id) + ".zip"
                 )
                 if self.type == OutputTypes.ALL
-                else oss.sign_url(
-                    current_app.config["OSS_OUTPUT_PREFIX"], str(self.id) + ".txt"
+                else fileStorage.sign_url(
+                    "output", str(self.id) + ".txt"
                 )
             )
         return data
