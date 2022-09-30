@@ -6,3 +6,4 @@
 2. 依赖环境MangoDB、Erlang、RabbitMQ
 3. `pip install -r requirements.txt`
 4. 以 `/config.py` 为模板创建 `/configs/dev.py` 用于开发（此目录已被 git ignore）
+5. 开发时，请直接在 `/configs/dev.py` 文件里面写

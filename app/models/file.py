@@ -47,6 +47,7 @@ from app.models.target import Target
 from app.models.term import Term
 from app.tasks.file_parse import parse_text, safe
 from app.tasks.ocr import ocr
+from app.tasks.thumbnail import image_thumbnail, remove_thumbnail
 from app.constants.source import SourcePositionType
 from app.constants.file import (
     FileNotExistReason,
@@ -572,6 +573,12 @@ class File(Document):
             return ""
         return fileStorage.sign_url("project", self.save_name)
 
+    @property
+    def thumbnail(self):
+        if not self.save_name:
+            return ""
+        return fileStorage.sign_url("thumbnail", self.save_name)
+
     @only_file
     def has_real_file(self):
         return bool(self.save_name)
@@ -611,6 +618,8 @@ class File(Document):
         oss_result = fileStorage.upload(
             "project", save_name, real_file
         )
+        # 本地存储时，生成缩略图文件
+        image_thumbnail("project", save_name)
         # 替换原存储名和md5
         self.update(save_name=save_name, md5=md5)
         # 更新文件大小，非激活修订版只更新自身文件大小
@@ -651,6 +660,7 @@ class File(Document):
                 oss_result = fileStorage.delete(
                     "project", self.save_name
                 )
+                remove_thumbnail("project", self.save_name)
             except PermissionError as e:
                 oss_result = e
                 pass
@@ -1078,7 +1088,7 @@ class File(Document):
             )
             url = self.url
             data["url"] = url
-            data["cover_url"] = url + "?x-oss-process=style/cover" if url else ""
+            data["cover_url"] = self.thumbnail if self.thumbnail else url
             data["image_ocr_percent"] = self.image_ocr_percent
             data["image_ocr_percent_detail_name"] = ImageOCRPercent.get_detail_by_value(
                 self.image_ocr_percent, "name"

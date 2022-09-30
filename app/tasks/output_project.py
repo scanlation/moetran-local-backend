@@ -92,7 +92,7 @@ def output_project_task(output_id):
             file_ids_include=file_ids_include,
             file_ids_exclude=file_ids_exclude,
         )
-        with open(zip_translations_txt_path, "w") as txt:
+        with open(zip_translations_txt_path, "w", encoding='utf-8') as txt:
             txt.write(labelplus)
         if type == OutputTypes.ONLY_TEXT:
             # 上传txt到oss
@@ -153,7 +153,7 @@ def output_project_task(output_id):
                         )
                         zip_file.write(file_path, file_in_zip_path)
             # 上传zip到oss
-            fileStorage.copy_file("output", zip_name, zip_file)
+            fileStorage.copy_file("output", zip_name, zip_path)
     except (Exception):
         output.update(status=OutputStatus.ERROR)
         logger.exception(Exception)

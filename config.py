@@ -1,6 +1,7 @@
 # ===========
 # 脱敏的生产环境配置（严禁记录密钥）
 # 开发测试配置可放在 configs 文件夹下（已 gitignore）或项目外
+# 至少要修改标注为 必填 的几个项目
 # ===========
 from os import environ as env
 
@@ -8,8 +9,9 @@ from os import environ as env
 # 基础设置
 # -----------
 APP_NAME = "moetran"
-SECRET_KEY = env["SECRET_KEY"]
-DEBUG = True
+SECRET_KEY = env["SECRET_KEY"] # 必填 - 密钥
+# 密钥：没有明确格式，只用来对密码加密（修改密钥后，所有之前的用户就无法登录了，需要重置密码）
+DEBUG = False
 TESTING = False
 MAX_CONTENT_LENGTH = 20 * 1024 * 1024
 # -----------
@@ -17,7 +19,10 @@ MAX_CONTENT_LENGTH = 20 * 1024 * 1024
 # -----------
 DB_URI = (
     f"{env['MONGODB_URL']}/{APP_NAME}?authSource=admin"
-)
+) # 必填 - MangoDB连接串
+# 测试环境请把下面一行前面的 # 删除然后修改下面一行的内容：
+# DB_URI = (f"mongodb://user:password@127.0.0.1:27017/{APP_NAME}?authSource=admin")
+# 如果MangoDB没有设置账号和密码，可以删除 user:password@ 这段，具体请搜索MangoDB连接串
 # -----------
 # i18n
 # -----------
@@ -46,10 +51,11 @@ FILE_CACHE_TYPE = env.get("FILE_CACHE_TYPE", "local")
 # 本地文件存储相关
 # -----------
 if FILE_CACHE_TYPE == "local":
-    FILE_PREFIX = "files/"
-    USER_AVATAR_PREFIX = "avatars/user/"
-    TEAM_AVATAR_PREFIX = "avatars/team/"
-    OUTPUT_PREFIX = "output/"
+    FILE_PREFIX = "files"
+    USER_AVATAR_PREFIX = "avatars/user"
+    TEAM_AVATAR_PREFIX = "avatars/team"
+    OUTPUT_PREFIX = "output"
+    PROJECT_PREDIX = "project"
 # -----------
 # OSS
 # -----------
@@ -74,10 +80,11 @@ if FILE_CACHE_TYPE == "oss":
     # -----------
     # 各类储存前缀
     # -----------
-    OSS_FILE_PREFIX = "files/"
-    OSS_OUTPUT_PREFIX = "outputs/"
-    OSS_USER_AVATAR_PREFIX = "user-avatars/"
-    OSS_TEAM_AVATAR_PREFIX = "team-avatars/"
+    FILE_PREFIX = "files/"
+    OUTPUT_PREFIX = "outputs/"
+    PROJECT_PREDIX = "project/"
+    USER_AVATAR_PREFIX = "user-avatars/"
+    TEAM_AVATAR_PREFIX = "team-avatars/"
 """
 # -----------
 # 谷歌接口
@@ -106,8 +113,8 @@ GOOGLE_STORAGE_MOEFLOW_VISION_TMP = {
 # -----------
 # EMAIL SMTP
 # -----------
-EMAIL_SMTP_HOST = "smtp.aliyun.com"
-EMAIL_SMTP_PORT = 465
+EMAIL_SMTP_HOST = env.get("EMAIL_SMTP_HOST", "smtp.163.com") # 必填 - SMTP服务器地址
+EMAIL_SMTP_PORT = env.get("EMAIL_SMTP_PORT", 465) # 必填 - SMTP服务器端口
 EMAIL_USE_SSL = True
 EMAIL_ADDRESS = env.get("EMAIL_ADDRESS", "no-reply@moetran.com")
 EMAIL_USERNAME = env.get("EMAIL_USERNAME", "")

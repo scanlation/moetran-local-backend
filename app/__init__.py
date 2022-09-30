@@ -18,6 +18,8 @@ from .apis import register_apis
 APP_PATH = os.path.abspath(os.path.dirname(__file__))
 FILE_PATH = os.path.abspath(os.path.join(APP_PATH, "..", "files"))  # 一般文件
 TMP_PATH = os.path.abspath(os.path.join(FILE_PATH, "tmp"))  # 临时文件存放地址
+STATIC_PATH = None # 文件存储目录仅在本地存储方式时，由环境变量赋值
+
 # 插件
 babel = Babel()
 oss = None
@@ -27,11 +29,20 @@ gs_vision = GoogleStorage()
 apikit = APIKit()
 
 config_path_env = "CONFIG_PATH"
+"""
+这里要先配置环境变量
+测试环境：
+CONFIG_PATH=../configs/dev.py
+对应 README 第4步中自己创建的配置
+docker正式环境：
+CONFIG_PATH=../config.py
+其他必填的参数全部写在docker的环境变量里面
+"""
 
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_envvar(config_path_env)  # 获取配置文件,仅从环境变量读取,均需要配置环境变量
+    app.config.from_envvar(config_path_env)  # 获取配置文件
     configure_logger(app)  # 配置日志记录(放在最前,会被下面调用)
 
     logger.info("-" * 50)
@@ -63,7 +74,10 @@ def create_app():
         oss.init(app.config)
         fileStorage = oss
     if app.config["FILE_CACHE_TYPE"] == "local":
+        # setattr(localFile, 'STATIC_PATH', STATIC_PATH)
         localFile.init(app.config)
+        STATIC_PATH = localFile.STATIC_PATH
+        logger.info("文件存储目录：" + STATIC_PATH)
         fileStorage = localFile
 
     # 检测 env_files 是否挂载成功
@@ -109,12 +123,14 @@ def create_celery():
             "app.tasks.file_parse",
             "app.tasks.output_project",
             # "app.tasks.ocr",
-            "app.tasks.import_from_labelplus"
+            "app.tasks.import_from_labelplus",
+            "app.tasks.thumbnail"
         ],
         related_name=None,
     )
     celery.conf.task_routes = {
         # "tasks.ocr_task": {"queue": "ocr"},
+        "tasks.thumbnail_task": {"queue": "output"},
         "tasks.output_project_task": {"queue": "output"},
         "tasks.import_from_labelplus_task": {"queue": "output"},
     }

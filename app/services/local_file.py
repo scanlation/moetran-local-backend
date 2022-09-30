@@ -8,18 +8,23 @@ from flask import url_for
 
 prefix_items = ["user_avatar", "team_avatar", "project", "thumbnail", "output"]
 
-def getDirName(basePath, filePath=None):
+def checkDirName(staticPath, basePath, filePath=None):
   """
   用相对路径获取绝对路径
   """
-  path = basePath
+  if staticPath[-1] != os.sep:
+    staticPath = staticPath + os.sep
+  path = os.path.abspath(os.path.join(staticPath, basePath))
   if filePath:
-    path = "./app/static/" + basePath + filePath
-  files_folder = os.path.dirname(path)
+    path = os.path.abspath(os.path.join(staticPath, basePath, filePath))
+  files_folder = path
   # 不存在文件夹自动创建
   if not os.path.isdir(files_folder):
-      os.makedirs(files_folder)
-  return files_folder.replace("./app/static/", "")
+    os.makedirs(files_folder)
+  if filePath:
+    return "{}/{}".format(basePath, filePath)
+  else:
+    return basePath
 
 class LocalFile:
   def __init__(self, config=None):
@@ -32,25 +37,32 @@ class LocalFile:
 
 
   def init(self, config):
+    self.STATIC_PATH = config.get('STATIC_PATH', os.path.abspath(os.path.join(os.getcwd(), "storage")))
     if config["FILE_CACHE_TYPE"] == "local":
+      self.cache_type = config["FILE_CACHE_TYPE"]
       self.file_domain = config.get("FILE_DOMAIN", None)
       # 文件根目录
-      base_folder = config.get("FILE_PREFIX", "files/")
-      self.base_folder = getDirName(base_folder)
+      base_folder = config.get("FILE_PREFIX", "files")
+      self.base_folder = checkDirName(self.STATIC_PATH, base_folder)
       for prefix in prefix_items:
-        value = config.get(prefix.upper() + "_PREFIX", prefix + "/")
-        dir_path = getDirName(base_folder, value)
+        value = config.get(prefix.upper() + "_PREFIX", prefix)
+        dir_path = checkDirName(self.STATIC_PATH, base_folder, value)
         setattr(self, prefix + "_folder", dir_path)
+
+  def getDirName(self, prefix):
+    basePath = getattr(self, prefix + "_folder")
+    return os.path.abspath(os.path.join(self.STATIC_PATH, basePath))
 
   def upload(self, path_type, filename, file):
     """上传文件"""
-    file_path = "./app/static/{}/{}".format(getattr(self, path_type + "_folder"), filename)
+    file_path = os.path.join(self.getDirName(path_type), filename)
     file.save(file_path)
   
   def is_exist(self, path_type, filename):
     """检查文件是否存在"""
-    file_path = "./app/static/{}/{}".format(getattr(self, path_type + "_folder"), filename)
+    file_path = os.path.join(self.getDirName(path_type), filename)
     return os.path.exists(file_path)
+
   def delete(self, path_type, filename):
     """删除文件"""
     if isinstance(filename, list):
@@ -59,29 +71,36 @@ class LocalFile:
       for file in filename:
         return self.delete(path_type, file)
     else:
-      file_path = "./app/static/{}/{}".format(getattr(self, path_type + "_folder"), filename)
-      return os.remove(file_path)
+      file_path = os.path.join(self.getDirName(path_type), filename)
+      if os.path.exists(file_path):
+        return os.remove(file_path)
+      else:
+        pass
+
   def download(self, path_type, filename, /, *, local_path=None):
-    file_path = "{}/app/static/{}/{}".format(os.getcwd(), getattr(self, path_type + "_folder"), filename)
+    file_path = os.path.join(self.getDirName(path_type), filename)
     if local_path:
       shutil.copy(file_path, local_path)
     else:
       return self.sign_url(path_type, filename)
+
   def copy_file(self, path_type, filename, from_path):
-    file_path = "{}/app/static/{}/{}".format(os.getcwd(), getattr(self, path_type + "_folder"), filename)
+    file_path = os.path.join(self.getDirName(path_type), filename)
     if not from_path:
       pass
     shutil.copy(from_path, file_path)
 
   def sign_url(self, path_type, filename):
     file_domain = self.file_domain
+    if not self.is_exist(path_type, filename):
+      return False
     url = "{}/{}".format(getattr(self, path_type + "_folder"), filename)
     if file_domain is None:
       if url[0:3] == "../":
         url = url[3:]
       elif url[0:2] == "./":
         url = url[2:]
-      url = url_for("static", filename=url, _external=True)
+      url = url_for("index.storage", path=url, _external=True)
     else:
       url = file_domain + url.replace(self.files_folder, "")
     return url
