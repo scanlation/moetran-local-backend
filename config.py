@@ -18,10 +18,10 @@ MAX_CONTENT_LENGTH = 20 * 1024 * 1024
 # Mongo 数据库
 # -----------
 DB_URI = (
-    f"{env['MONGODB_URL']}/{APP_NAME}?authSource=admin"
+    f"{env['MONGODB_URL']}/{APP_NAME}?authSource={APP_NAME}"
 ) # 必填 - MangoDB连接串
 # 测试环境请把下面一行前面的 # 删除然后修改下面一行的内容：
-# DB_URI = (f"mongodb://user:password@127.0.0.1:27017/{APP_NAME}?authSource=admin")
+# DB_URI = (f"mongodb://user:password@127.0.0.1:27017/{APP_NAME}?authSource={APP_NAME}")
 # 如果MangoDB没有设置账号和密码，可以删除 user:password@ 这段，具体请搜索MangoDB连接串
 # -----------
 # i18n

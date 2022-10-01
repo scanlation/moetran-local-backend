@@ -187,7 +187,7 @@ class File(Document):
 
     # == 安全（涉政涉黄）检测数据 ==
     safe_status = IntField(
-        db_field="ss", default=FileSafeStatus.NEED_MACHINE_CHECK
+        db_field="ss", default=FileSafeStatus.SAFE
     )  # 任务状态
     safe_task_id = StringField(db_field="sti")  # 文件安全检测任务celery id，用于查询状态
     safe_result_id = StringField(db_field="sri")  # 文件安全检测任务id，用于向阿里云查询结果
@@ -602,7 +602,7 @@ class File(Document):
         self.delete_real_file()
         # 重置安全检测数据
         self.update(
-            safe_status=FileSafeStatus.NEED_MACHINE_CHECK,
+            safe_status=FileSafeStatus.SAFE,
             unset__safe_task_id=1,
             unset__safe_result_id=1,
             unset__safe_start_time=1,

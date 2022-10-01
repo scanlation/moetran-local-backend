@@ -61,7 +61,7 @@ class LocalFile:
   def is_exist(self, path_type, filename):
     """检查文件是否存在"""
     file_path = os.path.join(self.getDirName(path_type), filename)
-    return os.path.exists(file_path)
+    return os.path.isfile(file_path)
 
   def delete(self, path_type, filename):
     """删除文件"""
@@ -72,7 +72,7 @@ class LocalFile:
         return self.delete(path_type, file)
     else:
       file_path = os.path.join(self.getDirName(path_type), filename)
-      if os.path.exists(file_path):
+      if os.path.isfile(file_path):
         return os.remove(file_path)
       else:
         pass
