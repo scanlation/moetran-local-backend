@@ -7,8 +7,8 @@ from flask_apikit import APIKit
 from flask_babel import Babel
 
 from app.constants.locale import Locale
-from app.services.google_storage import GoogleStorage
-from app.services.oss import OSS
+# from app.services.google_storage import GoogleStorage
+# from app.services.oss import OSS
 from app.services.local_file import LocalFile
 from app.utils.logging import configure_logger, logger
 
@@ -22,10 +22,10 @@ STATIC_PATH = None # 文件存储目录仅在本地存储方式时，由环境�
 
 # 插件
 babel = Babel()
-oss = None
+# oss = None
 localFile = LocalFile()
 fileStorage = localFile
-gs_vision = GoogleStorage()
+# gs_vision = GoogleStorage()
 apikit = APIKit()
 
 config_path_env = "CONFIG_PATH"
@@ -69,10 +69,12 @@ def create_app():
     # 文件储存
     logger.info("-" * 50)
     logger.info("文件存储方式：" + app.config["FILE_CACHE_TYPE"])
+    """
     if app.config["FILE_CACHE_TYPE"] == "oss":
         oss = OSS()
         oss.init(app.config)
         fileStorage = oss
+    """
     if app.config["FILE_CACHE_TYPE"] == "local":
         # setattr(localFile, 'STATIC_PATH', STATIC_PATH)
         localFile.init(app.config)

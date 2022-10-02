@@ -1,5 +1,5 @@
 from app.constants.file import FileType, ParseStatus
-from app.tasks.ocr import ocr
+# from app.tasks.ocr import ocr
 from app.models.team import TeamPermission
 import datetime
 from app.exceptions.project import ProjectFinishedError, TargetNotExistError

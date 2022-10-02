@@ -1,11 +1,12 @@
 from PIL import Image
+import os
 
 from app import celery, fileStorage
 
 @celery.task(name="tasks.thumbnail_task", time_limit=35)
 def thumbnail_task(path_type, filename):
   fileStorage.init(celery.conf.app_config)
-  src = "{}\\{}".format(fileStorage.getDirName(path_type), filename)
+  src = os.path.join(fileStorage.getDirName(path_type), filename)
   img = Image.open(src)
   base_width = 180
   base_height = 140
@@ -21,7 +22,6 @@ def thumbnail_task(path_type, filename):
 
 def image_thumbnail(path_type, filename):
   if fileStorage.cache_type == 'local':
-    print(path_type)
     thumbnail_task.delay(path_type, filename)
 
 def remove_thumbnail(path_type, filenames):

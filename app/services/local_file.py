@@ -78,11 +78,17 @@ class LocalFile:
         pass
 
   def download(self, path_type, filename, /, *, local_path=None):
-    file_path = os.path.join(self.getDirName(path_type), filename)
     if local_path:
-      shutil.copy(file_path, local_path)
+      return self.copy_file(path_type, filename)
     else:
       return self.sign_url(path_type, filename)
+  
+  def open(self, path_type, filename):
+    if not self.is_exist(path_type, filename):
+      return False
+    file_path = os.path.join(self.getDirName(path_type), filename)
+    return open(file_path, 'r')
+    
 
   def copy_file(self, path_type, filename, from_path):
     file_path = os.path.join(self.getDirName(path_type), filename)

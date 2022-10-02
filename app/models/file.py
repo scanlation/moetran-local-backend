@@ -46,7 +46,7 @@ from app.exceptions import (
 from app.models.target import Target
 from app.models.term import Term
 from app.tasks.file_parse import parse_text, safe
-from app.tasks.ocr import ocr
+# from app.tasks.ocr import ocr
 from app.tasks.thumbnail import image_thumbnail, remove_thumbnail
 from app.constants.source import SourcePositionType
 from app.constants.file import (
@@ -824,7 +824,7 @@ class File(Document):
             # 将解析设置成排队中
             self.update(parse_status=ParseStatus.QUEUING)
             # 调用OCR解析图片中的文字，并生成原文
-            result = ocr("file", str(self.id))
+            # result = ocr("file", str(self.id))
             # 记录task_id，用于之后查询进度
             self.update(parse_task_id=result.task_id)
         # 文本分行处理
