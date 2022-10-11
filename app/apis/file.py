@@ -273,6 +273,9 @@ class FileOCRAPI(MoeAPIView):
 
         }
         """
+        # 暂时关闭OCR相关接口
+        raise NoPermissionError(gettext("团队限额不足"))
+        """
         # 检查用户权限
         if not self.current_user.can(file.project.team, TeamPermission.USE_OCR_QUOTA):
             raise NoPermissionError(gettext("您没有此项目所在团队使用自动标记限额的权限"))
@@ -284,6 +287,7 @@ class FileOCRAPI(MoeAPIView):
             raise NoPermissionError(gettext("团队限额不足"))
         file.parse()
         return {"message": gettext("已加入队列"), "file": file.to_api()}
+        """
 
 
 class AdminFileListAPI(MoeAPIView):

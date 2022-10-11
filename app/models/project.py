@@ -936,7 +936,7 @@ class Project(GroupMixin, Document):
             + gettext("框外")
             + "\r\n"
             + "-\r\n"
-            + gettext("由 MoeFlow.com 导出")
+            + gettext("由 漫画译注器开源协作版 导出")
             + "\r\n"  # 注释
         )
         # 遍历所有图片

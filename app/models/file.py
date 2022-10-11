@@ -21,7 +21,7 @@ from mongoengine import (
     StringField,
 )
 
-from app import oss
+from app import fileStorage
 from app.core.responses import MoePagination
 from app.decorators.file import need_activated, only, only_file
 from app.exceptions import (
@@ -46,7 +46,8 @@ from app.exceptions import (
 from app.models.target import Target
 from app.models.term import Term
 from app.tasks.file_parse import parse_text, safe
-from app.tasks.ocr import ocr
+# from app.tasks.ocr import ocr
+from app.tasks.thumbnail import image_thumbnail, remove_thumbnail
 from app.constants.source import SourcePositionType
 from app.constants.file import (
     FileNotExistReason,
@@ -186,7 +187,7 @@ class File(Document):
 
     # == 安全（涉政涉黄）检测数据 ==
     safe_status = IntField(
-        db_field="ss", default=FileSafeStatus.NEED_MACHINE_CHECK
+        db_field="ss", default=FileSafeStatus.SAFE
     )  # 任务状态
     safe_task_id = StringField(db_field="sti")  # 文件安全检测任务celery id，用于查询状态
     safe_result_id = StringField(db_field="sri")  # 文件安全检测任务id，用于向阿里云查询结果
@@ -570,7 +571,13 @@ class File(Document):
     def url(self):
         if not self.save_name:
             return ""
-        return oss.sign_url(current_app.config["OSS_FILE_PREFIX"], self.save_name)
+        return fileStorage.sign_url("project", self.save_name)
+
+    @property
+    def thumbnail(self):
+        if not self.save_name:
+            return ""
+        return fileStorage.sign_url("thumbnail", self.save_name)
 
     @only_file
     def has_real_file(self):
@@ -582,8 +589,8 @@ class File(Document):
         # 从oss获取源文件
         if not self.save_name:
             raise SourceFileNotExist(self.file_not_exist_reason)
-        return oss.download(
-            current_app.config["OSS_FILE_PREFIX"], self.save_name, local_path=local_path
+        return fileStorage.download(
+            "project", self.save_name, local_path=local_path
         )
 
     @only_file
@@ -595,7 +602,7 @@ class File(Document):
         self.delete_real_file()
         # 重置安全检测数据
         self.update(
-            safe_status=FileSafeStatus.NEED_MACHINE_CHECK,
+            safe_status=FileSafeStatus.SAFE,
             unset__safe_task_id=1,
             unset__safe_result_id=1,
             unset__safe_start_time=1,
@@ -608,9 +615,11 @@ class File(Document):
         # 文件大小
         file_size = math.ceil(get_file_size(real_file))  # 获取文件大小，去掉小数
         # 将文件上传到OSS
-        oss_result = oss.upload(
-            current_app.config["OSS_FILE_PREFIX"], save_name, real_file
+        oss_result = fileStorage.upload(
+            "project", save_name, real_file
         )
+        # 本地存储时，生成缩略图文件
+        image_thumbnail("project", save_name)
         # 替换原存储名和md5
         self.update(save_name=save_name, md5=md5)
         # 更新文件大小，非激活修订版只更新自身文件大小
@@ -647,9 +656,15 @@ class File(Document):
         # 如果是文件夹则跳过
         if self.has_real_file:
             # 物理删除源文件
-            oss_result = oss.delete(
-                current_app.config["OSS_FILE_PREFIX"], self.save_name
-            )
+            try:
+                oss_result = fileStorage.delete(
+                    "project", self.save_name
+                )
+                remove_thumbnail("project", self.save_name)
+            except PermissionError as e:
+                oss_result = e
+                pass
+
             # 初始化对象，并更新缓存计数
             if init_obj:
                 self.update(
@@ -809,7 +824,7 @@ class File(Document):
             # 将解析设置成排队中
             self.update(parse_status=ParseStatus.QUEUING)
             # 调用OCR解析图片中的文字，并生成原文
-            result = ocr("file", str(self.id))
+            # result = ocr("file", str(self.id))
             # 记录task_id，用于之后查询进度
             self.update(parse_task_id=result.task_id)
         # 文本分行处理
@@ -1073,7 +1088,7 @@ class File(Document):
             )
             url = self.url
             data["url"] = url
-            data["cover_url"] = url + "?x-oss-process=style/cover" if url else ""
+            data["cover_url"] = self.thumbnail if self.thumbnail else url
             data["image_ocr_percent"] = self.image_ocr_percent
             data["image_ocr_percent_detail_name"] = ImageOCRPercent.get_detail_by_value(
                 self.image_ocr_percent, "name"

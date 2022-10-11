@@ -2,7 +2,6 @@
 导出项目
 """
 import os
-import oss2
 import shutil
 from zipfile import ZipFile
 
@@ -10,7 +9,7 @@ from app import FILE_PATH, TMP_PATH, celery
 
 from app.constants.output import OutputStatus, OutputTypes
 from app.constants.file import FileType
-from app import oss
+from app import fileStorage
 from app.models import connect_db
 from . import SyncResult
 from celery.utils.log import get_task_logger
@@ -34,9 +33,9 @@ def output_project_task(output_id):
     from app.models.user import User
 
     (File, Project, Team, Target, User)
-    oss_file_prefix = celery.conf.app_config["OSS_FILE_PREFIX"]
+    oss_file_prefix = celery.conf.app_config.get("FILE_PREFIX", "")
     connect_db(celery.conf.app_config)
-    oss.init(celery.conf.app_config)
+    fileStorage.init(celery.conf.app_config)
     # 获取项目
     output: Output = Output.objects(id=output_id).first()
     if output is None:
@@ -93,17 +92,15 @@ def output_project_task(output_id):
             file_ids_include=file_ids_include,
             file_ids_exclude=file_ids_exclude,
         )
-        with open(zip_translations_txt_path, "w") as txt:
+        with open(zip_translations_txt_path, "w", encoding='utf-8') as txt:
             txt.write(labelplus)
         if type == OutputTypes.ONLY_TEXT:
             # 上传txt到oss
-            with open(zip_translations_txt_path, "rb") as txt:
-                oss.upload(
-                    celery.conf.app_config["OSS_OUTPUT_PREFIX"],
-                    txt_name,
-                    txt,
-                    headers={"Content-Disposition": "attachment"},
-                )
+            fileStorage.copy_file(
+                "output",
+                txt_name,
+                zip_translations_txt_path
+            )
         elif type == OutputTypes.ALL:
             output.update(status=OutputStatus.DOWNLOADING)
             # 下载项目图片
@@ -117,20 +114,15 @@ def output_project_task(output_id):
                     os.path.join(zip_images_folder_path, file.name)
                 )
                 try:
-                    oss.download(
-                        oss_file_prefix, file.save_name, local_path=file_path,
+                    fileStorage.download(
+                        "project", file.save_name, local_path=file_path,
                     )
-                except (oss2.exceptions.NoSuchKey):
-                    errors += (
-                        f"File {file.name}<{str(file.id)}> is not found in server.\r\n"
-                    )
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
                 except (Exception):
                     logger.exception(Exception)
                     errors += f"File {file.name}<{str(file.id)}> download error.\r\n"
                     if os.path.exists(file_path):
                         os.remove(file_path)
+            """
             # 放入PS脚本和其资源文件夹
             if os.path.exists(ps_script_path):
                 shutil.copy(ps_script_path, zip_ps_script_path)
@@ -138,6 +130,7 @@ def output_project_task(output_id):
                 shutil.copytree(
                     ps_script_res_folder_path, zip_ps_script_res_folder_path
                 )
+            """
             # 记录错误
             if errors:
                 with open(zip_errors_txt_path, "w") as txt:
@@ -160,10 +153,7 @@ def output_project_task(output_id):
                         )
                         zip_file.write(file_path, file_in_zip_path)
             # 上传zip到oss
-            with open(zip_path, "rb") as zip_file:
-                oss.upload(
-                    celery.conf.app_config["OSS_OUTPUT_PREFIX"], zip_name, zip_file,
-                )
+            fileStorage.copy_file("output", zip_name, zip_path)
     except (Exception):
         output.update(status=OutputStatus.ERROR)
         logger.exception(Exception)

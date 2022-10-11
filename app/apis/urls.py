@@ -1,4 +1,5 @@
 from flask import Blueprint
+import os
 
 from app.apis.application import ApplicationAPI, ApplicationListAPI
 from app.apis.file import (
@@ -8,7 +9,7 @@ from app.apis.file import (
     ProjectFileListAPI,
     AdminFileListAPI,
 )
-from app.apis.index import IndexAPI, PingAPI, DocsAPI, ErrorAPI, UrlListAPI, WarningAPI
+from app.apis.index import IndexAPI, PingAPI, DocsAPI, StorageAPI, ErrorAPI, UrlListAPI, WarningAPI
 from app.apis.invitation import InvitationAPI, InvitationListAPI
 from app.apis.group import GroupPublicInfoAPI
 from app.apis.me import (
@@ -60,13 +61,16 @@ from app.apis.target import TargetAPI
 
 v1_prefix = "/v1"
 # api主页
-index = Blueprint("index", __name__)
+index = Blueprint("index", __name__, static_folder="static")
 index.add_url_rule("/", methods=["GET", "OPTIONS"], view_func=IndexAPI.as_view("index"))
 index.add_url_rule(
     "/ping", methods=["GET", "OPTIONS"], view_func=PingAPI.as_view("ping")
 )
 index.add_url_rule(
     "/docs/<path:path>", methods=["GET", "OPTIONS"], view_func=DocsAPI.as_view("docs"),
+)
+index.add_url_rule(
+    "/storage/<path:path>", methods=["GET", "OPTIONS"], view_func=StorageAPI.as_view("storage"),
 )
 index.add_url_rule(
     "/urls", methods=["GET", "OPTIONS"], view_func=UrlListAPI.as_view("url_list")
@@ -77,6 +81,7 @@ index.add_url_rule(
 index.add_url_rule(
     "/error", methods=["GET", "OPTIONS"], view_func=ErrorAPI.as_view("error")
 )
+
 # type模块
 type = Blueprint("type", __name__, url_prefix=v1_prefix + "/types")
 type.add_url_rule(
