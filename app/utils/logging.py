@@ -114,7 +114,7 @@ def configure_logger(app):
             (app.config["EMAIL_SMTP_HOST"], app.config["EMAIL_SMTP_PORT"]),
             app.config["EMAIL_ADDRESS"],
             app.config["EMAIL_ERROR_ADDRESS"],
-            "萌翻站点发生错误",
+            "{site_name} Ver.{site_version} ERROR TRACELOG".format(site_name = app.config["APP_SITE_NAME"], site_version =  app.config["APP_VERSION"]),
             credentials=(
                 app.config["EMAIL_ADDRESS"],
                 app.config["EMAIL_PASSWORD"],

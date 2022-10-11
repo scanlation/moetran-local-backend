@@ -2,7 +2,7 @@ import os
 from html import escape
 from urllib.parse import unquote, quote
 
-from flask import current_app, redirect, request, send_from_directory, url_for
+from flask import current_app, redirect, request, send_from_directory, url_for, render_template
 from app import fileStorage
 
 from app.core.views import MoeAPIView
@@ -10,7 +10,16 @@ from app.core.views import MoeAPIView
 
 class IndexAPI(MoeAPIView):
     def get(self):
-        return redirect(url_for("index.docs", path="index.html"))
+        if (current_app.config.get("APP_SITE_URL")):
+            return redirect(current_app.config.get("APP_SITE_URL"))
+        else:
+            site_url = current_app.config.get("APP_SITE_URL")
+            if (site_url is None):
+                site_url = url_for('.index', _external=True)
+            tpl_data = {
+                'site_name': current_app.config.get("APP_SITE_NAME")
+            }
+            return render_template("index.html", **tpl_data)
 
 
 class DocsAPI(MoeAPIView):

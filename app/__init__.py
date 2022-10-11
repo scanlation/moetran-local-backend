@@ -2,6 +2,7 @@ import os
 
 from celery import Celery
 from celery.signals import worker_shutting_down
+from celery.utils.log import get_task_logger
 from flask import Flask, g, request
 from flask_apikit import APIKit
 from flask_babel import Babel
@@ -64,7 +65,14 @@ def create_app():
     # 初始化插件
     babel.init_app(app)
     apikit.init_app(app)
+    # 在返回的头部信息中添加"Api-Version"头
+    @app.after_request
+    def after_request(resp):
+        resp.headers["X-Api-Version"] = '{} Version:{}'.format(app.config['APP_NAME'], app.config['APP_VERSION'])
+        return resp
+
     logger.info("-" * 50)
+    logger.info('{} Version.{}'.format(app.config['APP_NAME'], app.config['APP_VERSION']))
     logger.info("站点支持语言: " + str([str(i) for i in babel.list_translations()]))
     # 文件储存
     logger.info("-" * 50)
@@ -130,6 +138,10 @@ def create_celery():
         ],
         related_name=None,
     )
+    celery_logger = get_task_logger(app.name)
+    celery_logger.info("-" * 50)
+    celery_logger.info('{} Version.{}'.format(app.config['APP_NAME'], app.config['APP_VERSION']))
+    celery_logger.info("-" * 50)
     celery.conf.task_routes = {
         # "tasks.ocr_task": {"queue": "ocr"},
         "tasks.thumbnail_task": {"queue": "output"},
