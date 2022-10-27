@@ -3,7 +3,7 @@ import os
 from celery import Celery
 from celery.signals import worker_shutting_down
 from celery.utils.log import get_task_logger
-from flask import Flask, g, request
+from flask import Flask, g, request, render_template, url_for
 from flask_apikit import APIKit
 from flask_babel import Babel
 
@@ -70,6 +70,16 @@ def create_app():
     def after_request(resp):
         resp.headers["X-Api-Version"] = '{} Version:{}'.format(app.config['APP_NAME'], app.config['APP_VERSION'])
         return resp
+    @app.errorhandler(404)
+    def page_not_found(error):
+        site_url = app.config.get("APP_SITE_URL")
+        # if (site_url is None):
+        #   site_url = url_for('.index', _external=True)
+        tpl_data = {
+            'site_name': app.config.get("APP_SITE_NAME"),
+            'site_url': site_url
+        }
+        return render_template("index.html", **tpl_data)
 
     logger.info("-" * 50)
     logger.info('{} Version.{}'.format(app.config['APP_NAME'], app.config['APP_VERSION']))
