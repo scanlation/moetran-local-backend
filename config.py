@@ -9,7 +9,7 @@ from os import environ as env
 # 基础设置
 # -----------
 APP_NAME = "moetran"
-APP_VERSION = "0.5.1010"
+APP_VERSION = "0.5.1020"
 APP_SITE_NAME = env.get("APP_SITE_NAME", "漫画译注器协作版")
 APP_SITE_URL = env.get("APP_SITE_URL")
 SECRET_KEY = env["SECRET_KEY"] # 必填 - 密钥
@@ -59,60 +59,16 @@ if FILE_CACHE_TYPE == "local":
     TEAM_AVATAR_PREFIX = "avatars/team"
     OUTPUT_PREFIX = "output"
     PROJECT_PREDIX = "project"
+    FILE_SCHEME = env.get('FILE_SCHEME', 'http')
+    # 如果需要独立文件的访问地址，请配置包括协议的完整地址。此时上方的协议变量会失效
+    # 例如：https://files.moetran.com/
+    FILE_DOMAIN = env.get('FILE_DOMAIN')
+    
 # -----------
-# OSS
+# OSS 暂时移除了相关配置
 # -----------
-if FILE_CACHE_TYPE == "oss":
-    OSS_ACCESS_KEY_ID = env["OSS_ACCESS_KEY_ID"]
-    OSS_ACCESS_KEY_SECRET = env["OSS_ACCESS_KEY_SECRET"]
-    OSS_ENDPOINT = env["OSS_ENDPOINT"]  # 线上需要修改成内网端点
-    OSS_BUCKET_NAME = env["OSS_BUCKET_NAME"]
-    # OSS_DOMAIN 可能绑定在 CDN 来加速 OSS，并开启了 CDN 的[阿里云 OSS 私有 Bucket 回源]和[URL 鉴权]，
-    # 此时需要设置 OSS_VIA_CDN = True，将通过 CDN 的 URL 鉴权方式来生成 URL，而不用 OSS 的 URL 签名
-    OSS_VIA_CDN = False
-    # CDN URL 鉴权主/备 KEY
-    CDN_URL_KEY_A = env["CDN_URL_KEY_A"]
-    CDN_URL_KEY_B = env["CDN_URL_KEY_B"]  # 备 KEY 暂未用到
-    # 用户自定义域名（未设置则填写阿里云提供的 OSS 域名）
-    OSS_DOMAIN = env["OSS_DOMAIN"]
-    # -----------
-    # 内容安全
-    # -----------
-    SAFE_ACCESS_KEY_ID = "-"
-    SAFE_ACCESS_KEY_SECRET = "-"
-    # -----------
-    # 各类储存前缀
-    # -----------
-    FILE_PREFIX = "files/"
-    OUTPUT_PREFIX = "outputs/"
-    PROJECT_PREDIX = "project/"
-    USER_AVATAR_PREFIX = "user-avatars/"
-    TEAM_AVATAR_PREFIX = "team-avatars/"
-"""
-# -----------
-# 谷歌接口
-# -----------
-GOOGLE_HTTP_PROXY = None
-GOOGLE_REVERSE_PROXY_AUTH = (
-    env["GOOGLE_REVERSE_PROXY_USER"],
-    env["GOOGLE_REVERSE_PROXY_PASS"],
-)
-# -----------
-# 谷歌 OCR(Vision) 接口
-# -----------
-GOOGLE_OCR_API_KEY = env["GOOGLE_OCR_API_KEY"]
-GOOGLE_OCR_API_URL = (
-    "https://vision.googleapis.com/v1/images:annotate" + f"?key={GOOGLE_OCR_API_KEY}"
-)
-# -----------
-# 谷歌云储存（用于中转 OCR(Vision) 接口所使用的 bucket）
-# -----------
-GOOGLE_STORAGE_MOEFLOW_VISION_TMP = {
-    "JSON": "env_files/google_storage_service_account.json",
-    "BUCKET_NAME": "moeflow",
-    "GS_URL": "gs://moeflow",
-}
-"""
+# if FILE_CACHE_TYPE == "oss":
+
 # -----------
 # EMAIL SMTP
 # -----------

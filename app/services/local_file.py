@@ -39,6 +39,7 @@ class LocalFile:
   def init(self, config):
     self.STATIC_PATH = config.get('STATIC_PATH', os.path.abspath(os.path.join(os.getcwd(), "storage")))
     if config["FILE_CACHE_TYPE"] == "local":
+      self.scheme = config.get("FILE_SCHEME", "http")
       self.cache_type = config["FILE_CACHE_TYPE"]
       self.file_domain = config.get("FILE_DOMAIN", None)
       # 文件根目录
@@ -78,8 +79,9 @@ class LocalFile:
         pass
 
   def download(self, path_type, filename, /, *, local_path=None):
+    file_path = os.path.join(self.getDirName(path_type), filename)
     if local_path:
-      return self.copy_file(path_type, filename)
+      shutil.copy(file_path, local_path)
     else:
       return self.sign_url(path_type, filename)
   
@@ -106,7 +108,7 @@ class LocalFile:
         url = url[3:]
       elif url[0:2] == "./":
         url = url[2:]
-      url = url_for("index.storage", path=url, _external=True)
+      url = url_for("index.storage", path=url, _external=True, _scheme=self.scheme)
     else:
       url = file_domain + url.replace(self.files_folder, "")
     return url
