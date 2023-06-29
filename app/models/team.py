@@ -13,7 +13,7 @@ from mongoengine import (
     DateTimeField,
 )
 
-from app import fileStorage
+from app import oss
 from app.core.rbac import (
     AllowApplyType,
     GroupMixin,
@@ -250,7 +250,7 @@ class Team(GroupMixin, Document):
     intro = StringField(db_field="i", default="")  # 团队介绍
     default_role_system_code = "beginner"
     default_role = ReferenceField("TeamRole", db_field="dr", reverse_delete_rule=DENY)
-    max_user = IntField(db_field="u", required=True, default=100)  # 人数限制
+    max_user = IntField(db_field="u", required=True, default=100000)  # 人数限制
     # OCR限额
     ocr_quota_month = IntField(db_field="om", default=0)  # 每月限额
     ocr_quota_used = IntField(db_field="ou", default=0)  # 当月已用限额，每月1号0点清零
@@ -304,8 +304,8 @@ class Team(GroupMixin, Document):
     def avatar(self):
         # 没有设置头像时返回默认团队头像
         if self._avatar:
-            return fileStorage.sign_url(
-                "team_avatar", self._avatar
+            return oss.sign_url(
+                current_app.config["OSS_TEAM_AVATAR_PREFIX"], self._avatar
             )
         return current_app.config.get("DEFAULT_TEAM_AVATAR", None)
 

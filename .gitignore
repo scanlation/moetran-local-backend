@@ -101,9 +101,6 @@ gen
 /logs/log.txt
 /docs/
 /file/tmp/*
-/app/static/*
-/storage/files/*
-/frontend/*
 
 # VSCode project files
 /.vscode
@@ -115,7 +112,6 @@ gen
 
 # 配置文件
 /configs/
-/env_files/
 
 # 临时文件夹
 /files/tmp/

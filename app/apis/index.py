@@ -1,25 +1,17 @@
 import os
 from html import escape
-from urllib.parse import unquote, quote
+from urllib.parse import unquote
 
-from flask import current_app, redirect, request, send_from_directory, url_for, render_template
-from app import fileStorage
+from flask import (
+    current_app,
+    redirect,
+    request,
+    send_from_directory,
+    url_for,
+    render_template,
+)
 
 from app.core.views import MoeAPIView
-
-
-class IndexAPI(MoeAPIView):
-    def get(self):
-        if (current_app.config.get("APP_SITE_URL")):
-            return redirect(current_app.config.get("APP_SITE_URL"))
-        else:
-            site_url = current_app.config.get("APP_SITE_URL")
-            if (site_url is None):
-                site_url = url_for('.index', _external=True)
-            tpl_data = {
-                'site_name': current_app.config.get("APP_SITE_NAME")
-            }
-            return render_template("index.html", **tpl_data)
 
 
 class DocsAPI(MoeAPIView):
@@ -28,17 +20,6 @@ class DocsAPI(MoeAPIView):
         if path.startswith("index.html") and current_app.config.get("DEBUG"):
             os.system("apidoc -i app/ -o docs/")
         return send_from_directory("../docs", path)
-
-class StorageAPI(MoeAPIView):
-    def get(self, path):
-        name = request.args.get('download', None)
-        if name:
-            name = name + os.path.splitext(path)[-1]
-            resp = send_from_directory(fileStorage.STATIC_PATH, path, as_attachment=True)
-            resp.headers["Content-disposition"] = 'attachment; filename=%s' % quote(name)
-            return resp
-        else:
-            return send_from_directory(fileStorage.STATIC_PATH, path)
 
 
 class PingAPI(MoeAPIView):

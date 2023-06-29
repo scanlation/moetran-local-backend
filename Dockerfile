@@ -1,12 +1,9 @@
-FROM python:3.9.2
+FROM python:3.8.13
 
-LABEL project="moetran-backend"
+LABEL project="moeflow-backend"
 
 COPY . /app
 WORKDIR /app
 EXPOSE 5000
-
-VOLUME ["/app/storage"]
-
 
 RUN pip install -r requirements.txt

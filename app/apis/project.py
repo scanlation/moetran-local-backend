@@ -1,5 +1,5 @@
 from app.constants.file import FileType, ParseStatus
-# from app.tasks.ocr import ocr
+from app.tasks.ocr import ocr
 from app.models.team import TeamPermission
 import datetime
 from app.exceptions.project import ProjectFinishedError, TargetNotExistError
@@ -253,13 +253,11 @@ class ProjectTargetOutputListAPI(MoeAPIView):
             raise TargetNotExistError
         # 如果上一个翻译在5分钟内则禁止再次新增
         last_output = target.outputs().first()
-        """
         if last_output and (
             datetime.datetime.utcnow() - last_output.create_time
             < datetime.timedelta(seconds=60 * 5)
         ):
             raise OutputTooFastError
-        """
         data = self.get_json(CreateOutputSchema())
         # 删除三个导出之前的
         old_targets = target.outputs().skip(2)
@@ -326,9 +324,6 @@ class ProjectOCRAPI(MoeAPIView):
 
         }
         """
-        # 暂时关闭OCR相关接口
-        raise NoPermissionError(gettext("团队限额不足"))
-        """
         # 检查用户权限
         if not self.current_user.can(project.team, TeamPermission.USE_OCR_QUOTA):
             raise NoPermissionError(gettext("您没有此项目所在团队使用自动标记限额的权限"))
@@ -346,7 +341,6 @@ class ProjectOCRAPI(MoeAPIView):
         images.update(parse_status=ParseStatus.QUEUING)
         ocr("project", str(project.id))
         return {"message": gettext("已开始自动标记")}
-        """
 
 
 # TODO： 准备删掉这个 api

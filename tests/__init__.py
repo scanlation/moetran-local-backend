@@ -7,6 +7,7 @@ import os
 from mongoengine import connection
 
 from app import create_app, FILE_PATH
+from app.models.site_setting import SiteSetting
 from app.models.user import User
 from app.models.team import Team
 from app.models.project import ProjectSet
@@ -14,6 +15,10 @@ from app.models.v_code import VCodeType, VCode
 from typing import Any, Union
 
 TEST_FILE_PATH = os.path.abspath(os.path.join(FILE_PATH, "test"))
+DEFAULT_TEAMS_COUNT = 1
+DEFAULT_TEAM_USER_RELATIONS = 1
+DEFAULT_PROJECT_SETS_COUNT = 1
+DEFAULT_USERS_COUNT = 1
 
 
 def create_test_app():
@@ -35,6 +40,8 @@ class MoeTestCase(TestCase):
         self.app_context = self.app.app_context()
         self.app_context.push()
         self.client = self.app.test_client(use_cookies=True)
+        self.disable_whitelist()
+        self.disable_only_allow_admin_create_team()
 
     def tearDown(self):
         self.app_context.pop()
@@ -76,6 +83,18 @@ class MoeTestCase(TestCase):
     def get_creator(self, group: Union[Team, Project]) -> User:
         """获取团队或项目的创建人"""
         return group.users(role=group.role_cls.by_system_code("creator")).first()
+
+    def disable_whitelist(self):
+        """禁用白名单"""
+        site_setting = SiteSetting.get()
+        site_setting.enable_whitelist = False
+        site_setting.save()
+
+    def disable_only_allow_admin_create_team(self):
+        """禁用仅允许管理员创建团队"""
+        site_setting = SiteSetting.get()
+        site_setting.only_allow_admin_create_team = False
+        site_setting.save()
 
 
 class MoeAPITestCase(MoeTestCase):

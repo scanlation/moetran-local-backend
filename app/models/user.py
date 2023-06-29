@@ -16,7 +16,7 @@ from mongoengine import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from app import fileStorage
+from app import oss
 from app.exceptions import (
     ApplicationAlreadyExistError,
     BadTokenError,
@@ -35,6 +35,7 @@ from app.models.application import Application, ApplicationStatus
 from app.models.invitation import Invitation, InvitationStatus
 from app.models.message import Message
 from app.models.project import Project, ProjectRole, ProjectUserRelation
+from app.models.site_setting import SiteSetting
 from app.models.team import Team, TeamPermission, TeamUserRelation
 from app.regexs import EMAIL_REGEX, USER_NAME_REGEX
 from app.constants.locale import Locale
@@ -62,6 +63,13 @@ class User(Document):
         user = cls(name=name, email=email.lower())
         user.password = password
         user.save()
+        # 将用户自动加入默认团队
+        auto_join_team_ids = SiteSetting.get().auto_join_team_ids
+        if auto_join_team_ids and isinstance(auto_join_team_ids, list):
+            for team_id in auto_join_team_ids:
+                team = Team.objects(id=team_id).first()
+                if team is not None:
+                    user.join(team)
         return user
 
     @classmethod
@@ -199,8 +207,8 @@ class User(Document):
     @property
     def avatar(self):
         if self._avatar:
-            return fileStorage.sign_url(
-                "user_avatar", self._avatar
+            return oss.sign_url(
+                current_app.config["OSS_USER_AVATAR_PREFIX"], self._avatar
             )
         return current_app.config.get("DEFAULT_USER_AVATAR", None)
 
@@ -230,7 +238,7 @@ class User(Document):
             "locale": Locale.to_api(id=self.locale),
             "admin": self.admin,
         }
-        if g.get("current_user") and g.get("current_user") == self:
+        if g.get("current_user") and g.get("current_user").admin:
             data = {**data, **{"email": self.email}}
         return data
 
@@ -350,7 +358,11 @@ class User(Document):
     def applications(self, group=None, status=None, skip=None, limit=None):
         """获取自己发出的所有的申请"""
         applications = Application.get(
-            user=self, group=group, status=status, skip=skip, limit=limit,
+            user=self,
+            group=group,
+            status=status,
+            skip=skip,
+            limit=limit,
         )
         return applications
 

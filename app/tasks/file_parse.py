@@ -13,7 +13,7 @@ from celery.exceptions import MaxRetriesExceededError
 from flask import json
 
 from app import celery
-from app import fileStorage
+from app import oss
 from app.models import connect_db
 from app.constants.file import (
     FileNotExistReason,
@@ -43,8 +43,9 @@ def parse_text_task(file_id, old_revision_id=None):
 
     (Project, Team, User)
     # 配置
+    oss_file_prefix = celery.conf.app_config["OSS_FILE_PREFIX"]
     connect_db(celery.conf.app_config)
-    fileStorage.init(celery.conf.app_config)
+    oss.init(celery.conf.app_config)
     # 获取旧修订版
     old_revision = None
     if old_revision_id:
@@ -63,7 +64,7 @@ def parse_text_task(file_id, old_revision_id=None):
         parse_status=ParseStatus.PARSING, parse_start_time=datetime.datetime.utcnow(),
     )
     # 下载文件，并获取内容
-    text_file = fileStorage.open('project', file.save_name)
+    text_file = oss.download(oss_file_prefix, file.save_name)
     try:
         text = text_file.read()
     except Exception as e:
@@ -123,9 +124,7 @@ def parse_text(file_id, /, *, old_revision_id=None, run_sync=False):
 
 @celery.task(name="tasks.safe_task", bind=True, max_retries=3)
 def safe_task(self, file_id):
-    pass
-    """
-    发送安全检测请求
+    """发送安全检测请求"""
     from app.models.file import File
     from app.models.project import Project
     from app.models.team import Team
@@ -205,7 +204,6 @@ def safe_task(self, file_id):
                 unset__safe_start_time=1,
             )
             return f"失败：超过最大重试次数，错误内容：({e})"
-    """
 
 
 def safe(file_id):
@@ -214,9 +212,7 @@ def safe(file_id):
 
 @celery.task(name="tasks.safe_result_task", bind=True, max_retries=10)
 def safe_result_task(self, file_id):
-    pass
-    """
-    获取检测安全检测结果
+    """获取检测安全检测结果"""
     from app.models.file import File
     from app.models.project import Project
     from app.models.team import Team
@@ -307,7 +303,6 @@ def safe_result_task(self, file_id):
                 unset__safe_task_id=1,
             )
             return f"失败：超过最大尝试次数，错误内容：{e}"
-    """
 
 
 @celery.task(name="tasks.find_terms_task", time_limit=1200)

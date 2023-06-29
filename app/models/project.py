@@ -329,7 +329,7 @@ class Project(GroupMixin, Document):
     default_role = ReferenceField(
         "ProjectRole", db_field="dr", reverse_delete_rule=DENY
     )
-    max_user = IntField(db_field="u", required=True, default=100)  # 最大用户数
+    max_user = IntField(db_field="u", required=True, default=100000)  # 最大用户数
     source_name = StringField(db_field="sn")  # 作品原名
     target_name = StringField(db_field="tn")  # 作品译名
     source_language = ReferenceField(  # 源语言
@@ -343,7 +343,9 @@ class Project(GroupMixin, Document):
 
     # == 术语库 ==
     _term_banks = ListField(
-        ReferenceField(TermBank, reverse_delete_rule=PULL), db_field="tb", default=list,
+        ReferenceField(TermBank, reverse_delete_rule=PULL),
+        db_field="tb",
+        default=list,
     )
     need_find_terms = BooleanField(db_field="nft", default=False)
 
@@ -791,7 +793,8 @@ class Project(GroupMixin, Document):
             raise ProjectNoFinishPlanError
         # 恢复到工作状态，并删除计划完结时间
         self.update(
-            status=ProjectStatus.WORKING, unset__plan_finish_time=1,
+            status=ProjectStatus.WORKING,
+            unset__plan_finish_time=1,
         )
         self.reload()
 
@@ -809,7 +812,8 @@ class Project(GroupMixin, Document):
             if file.type != FileType.FOLDER:
                 # 删除对象源文件
                 file.delete_real_file(
-                    update_cache=False, file_not_exist_reason=FileNotExistReason.FINISH,
+                    update_cache=False,
+                    file_not_exist_reason=FileNotExistReason.FINISH,
                 )
             file.save()
         # 物理删除所有导出的output
@@ -936,7 +940,7 @@ class Project(GroupMixin, Document):
             + gettext("框外")
             + "\r\n"
             + "-\r\n"
-            + gettext("由 漫画译注器开源协作版 导出")
+            + gettext("可使用 LabelPlus Photoshop 脚本导入 psd 中")
             + "\r\n"  # 注释
         )
         # 遍历所有图片

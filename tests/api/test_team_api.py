@@ -10,13 +10,15 @@ from app.exceptions import (
     RoleNotExistError,
     ProjectNotExistError,
 )
+from app.exceptions.team import OnlyAllowAdminCreateTeamError
 from app.models.project import Project, ProjectSet
+from app.models.site_setting import SiteSetting
 from app.models.team import Team
 from app.models.user import User
 from app.constants.project import ProjectStatus
 from app.constants.role import RoleType
 from flask_apikit.exceptions import ValidateError
-from tests import MoeAPITestCase
+from tests import DEFAULT_PROJECT_SETS_COUNT, DEFAULT_TEAMS_COUNT, MoeAPITestCase
 
 
 class TeamAPITestCase(MoeAPITestCase):
@@ -186,7 +188,7 @@ class TeamAPITestCase(MoeAPITestCase):
             )
             self.assertErrorEqual(data)
             # 检测有一个团队
-            self.assertEqual(Team.objects.count(), 1)
+            self.assertEqual(Team.objects.count(), 1 + DEFAULT_TEAMS_COUNT)
             # 获得这个团队
             team = Team.objects(name="11").first()
             # 已加入，并且是创建人
@@ -222,7 +224,7 @@ class TeamAPITestCase(MoeAPITestCase):
             )
             self.assertErrorEqual(data)
             # 检测有两个团队
-            self.assertEqual(2, Team.objects.count())
+            self.assertEqual(2 + DEFAULT_TEAMS_COUNT, Team.objects.count())
             # == 默认角色使用其他团队的角色，不能创建 ==
             # 给team1创建一个role
             custom_role = team.create_role(
@@ -296,7 +298,7 @@ class TeamAPITestCase(MoeAPITestCase):
             )
             self.assertErrorEqual(data2)
             # 检测有两个团队
-            self.assertEqual(Team.objects.count(), 2)
+            self.assertEqual(Team.objects.count(), 2 + DEFAULT_TEAMS_COUNT)
             # 获得团队
             team1 = Team.objects(id=data1.json["team"]["id"]).first()
             team2 = Team.objects(id=data2.json["team"]["id"]).first()
@@ -408,7 +410,8 @@ class TeamAPITestCase(MoeAPITestCase):
             self.assertEqual("22", team2.name)
             self.assertEqual(AllowApplyType.ALL, team2.allow_apply_type)
             self.assertEqual(
-                ApplicationCheckType.NO_NEED_CHECK, team2.application_check_type,
+                ApplicationCheckType.NO_NEED_CHECK,
+                team2.application_check_type,
             )
             self.assertEqual(member_role, team2.default_role)
             self.assertEqual("22", team2.intro)
@@ -429,7 +432,8 @@ class TeamAPITestCase(MoeAPITestCase):
             self.assertEqual("33", team2.name)
             self.assertEqual(AllowApplyType.NONE, team2.allow_apply_type)
             self.assertEqual(
-                ApplicationCheckType.NO_NEED_CHECK, team2.application_check_type,
+                ApplicationCheckType.NO_NEED_CHECK,
+                team2.application_check_type,
             )
             self.assertEqual(custom_role, team2.default_role)
             self.assertEqual("", team2.intro)
@@ -510,7 +514,7 @@ class TeamAPITestCase(MoeAPITestCase):
             )
             self.assertErrorEqual(data2)
             # 检测有两个团队
-            self.assertEqual(Team.objects.count(), 2)
+            self.assertEqual(Team.objects.count(), 2 + DEFAULT_TEAMS_COUNT)
             # 获得团队
             team1 = Team.objects(id=data1.json["team"]["id"]).first()
             team2 = Team.objects(id=data2.json["team"]["id"]).first()
@@ -743,7 +747,7 @@ class TeamAPITestCase(MoeAPITestCase):
             # 创建team1
             team1 = Team.create(name="t1", creator=user6)
             # 检测有团队
-            self.assertEqual(Team.objects.count(), 1)
+            self.assertEqual(Team.objects.count(), 1 + DEFAULT_TEAMS_COUNT)
             # 加入用户
             user1.join(team1, role=member_role)
             user2.join(team1, role=senior_role)
@@ -752,53 +756,62 @@ class TeamAPITestCase(MoeAPITestCase):
             self.assertEqual(team1.users().count(), 5)
             # == 资深成员无法删除成员 ==
             data = self.delete(
-                f"/v1/teams/{str(team1.id)}/users/{str(user1.id)}", token=token2,
+                f"/v1/teams/{str(team1.id)}/users/{str(user1.id)}",
+                token=token2,
             )
             self.assertErrorEqual(data, NoPermissionError)
             # == 资深成员无法删除管理员 ==
             data = self.delete(
-                f"/v1/teams/{str(team1.id)}/users/{str(user3.id)}", token=token2,
+                f"/v1/teams/{str(team1.id)}/users/{str(user3.id)}",
+                token=token2,
             )
             self.assertErrorEqual(data, NoPermissionError)
             # == 管理员无法删除管理员 ==
             data = self.delete(
-                f"/v1/teams/{str(team1.id)}/users/{str(user3.id)}", token=token4,
+                f"/v1/teams/{str(team1.id)}/users/{str(user3.id)}",
+                token=token4,
             )
             self.assertErrorEqual(data, NoPermissionError)
             # == 管理员无法删除非团队成员 ==
             data = self.delete(
-                f"/v1/teams/{str(team1.id)}/users/{str(user5.id)}", token=token4,
+                f"/v1/teams/{str(team1.id)}/users/{str(user5.id)}",
+                token=token4,
             )
             self.assertErrorEqual(data, UserNotExistError)
             # == 非团队成员无法删除成员 ==
             data = self.delete(
-                f"/v1/teams/{str(team1.id)}/users/{str(user1.id)}", token=token5,
+                f"/v1/teams/{str(team1.id)}/users/{str(user1.id)}",
+                token=token5,
             )
             self.assertErrorEqual(data, NoPermissionError)
             self.assertEqual(team1.users().count(), 5)  # 5个人
             # == 成员可以删除自己 ==
             data = self.delete(
-                f"/v1/teams/{str(team1.id)}/users/{str(user1.id)}", token=token1,
+                f"/v1/teams/{str(team1.id)}/users/{str(user1.id)}",
+                token=token1,
             )
             self.assertErrorEqual(data)
             self.assertEqual(team1.users().count(), 4)  # 4个人
             # == 管理员可以删除资深成员 ==
             data = self.delete(
-                f"/v1/teams/{str(team1.id)}/users/{str(user2.id)}", token=token4,
+                f"/v1/teams/{str(team1.id)}/users/{str(user2.id)}",
+                token=token4,
             )
             self.assertErrorEqual(data)
             self.assertEqual(team1.users().count(), 3)  # 3个人，剩下2个管理员和创建者
             # == 管理员可以删除自己 ==
             self.assertErrorEqual(data)
             data = self.delete(
-                f"/v1/teams/{str(team1.id)}/users/{str(user4.id)}", token=token4,
+                f"/v1/teams/{str(team1.id)}/users/{str(user4.id)}",
+                token=token4,
             )
             self.assertErrorEqual(data)
             self.assertEqual(team1.users().count(), 2)  # 2个人，管理员和创建者
             # == 创建者不能删除自己 ==
             self.assertErrorEqual(data)
             data = self.delete(
-                f"/v1/teams/{str(team1.id)}/users/{str(user6.id)}", token=token6,
+                f"/v1/teams/{str(team1.id)}/users/{str(user6.id)}",
+                token=token6,
             )
             self.assertErrorEqual(data, CreatorCanNotLeaveError)
             self.assertEqual(team1.users().count(), 2)  # 2个人，管理员和创建者
@@ -921,7 +934,10 @@ class TeamProjectAPITestCase(MoeAPITestCase):
             data = self.get(
                 f"/v1/teams/{str(team1.id)}/projects",
                 query_string={
-                    "status": [ProjectStatus.WORKING, ProjectStatus.PLAN_DELETE,]
+                    "status": [
+                        ProjectStatus.WORKING,
+                        ProjectStatus.PLAN_DELETE,
+                    ]
                 },
                 token=token1,
             )
@@ -997,7 +1013,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             # 获取默认角色
             member_role = Team.role_cls.by_system_code("beginner")
             # 初始没有项目集
-            self.assertEqual(0, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 0, ProjectSet.objects.count())
             # 创建team1
             data1 = self.post(
                 "/v1/teams",
@@ -1013,7 +1029,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             self.assertErrorEqual(data1)
             team1 = Team.objects(id=data1.json["team"]["id"]).first()
             # 创建team时自动创建了一个
-            self.assertEqual(1, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 1, ProjectSet.objects.count())
             # 创建project set
             data = self.post(
                 f"/v1/teams/{str(team1.id)}/project-sets",
@@ -1021,7 +1037,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
                 token=token1,
             )
             self.assertErrorEqual(data)
-            self.assertEqual(2, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 2, ProjectSet.objects.count())
             # == user2没有权限查看 ==
             data = self.get(f"/v1/teams/{str(team1.id)}/project-sets", token=token2)
             self.assertErrorEqual(data, NoPermissionError)
@@ -1040,7 +1056,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             token1 = self.create_user("11", "1@1.com", "111111").generate_token()
             token2 = self.create_user("22", "2@1.com", "111111").generate_token()
             # 初始没有项目集
-            self.assertEqual(0, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 0, ProjectSet.objects.count())
             # 创建一个team
             # 获取默认角色
             member_role = Team.role_cls.by_system_code("beginner")
@@ -1059,7 +1075,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             self.assertErrorEqual(data1)
             team1 = Team.objects(id=data1.json["team"]["id"]).first()
             # == 测试开始 ==
-            self.assertEqual(1, ProjectSet.objects.count())  # team1带有一个默认项目集
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 1, ProjectSet.objects.count())  # team1带有一个默认项目集
             # 创建project set
             data = self.post(
                 f"/v1/teams/{str(team1.id)}/project-sets",
@@ -1067,7 +1083,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
                 token=token1,
             )
             self.assertErrorEqual(data)
-            self.assertEqual(2, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 2, ProjectSet.objects.count())
             # == user2没有权限创建 ==
             data = self.post(
                 f"/v1/teams/{str(team1.id)}/project-sets",
@@ -1075,7 +1091,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
                 token=token2,
             )
             self.assertErrorEqual(data, NoPermissionError)
-            self.assertEqual(2, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 2, ProjectSet.objects.count())
 
     def test_edit_team_project_set(self):
         """测试修改团队项目集"""
@@ -1085,7 +1101,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             token1 = self.create_user("11", "1@1.com", "111111").generate_token()
             token2 = self.create_user("22", "2@1.com", "111111").generate_token()
             # 初始没有项目集
-            self.assertEqual(0, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 0, ProjectSet.objects.count())
             # 创建一个team
             # 获取默认角色
             member_role = Team.role_cls.by_system_code("beginner")
@@ -1104,7 +1120,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             self.assertErrorEqual(data1)
             team1 = Team.objects(id=data1.json["team"]["id"]).first()
             # team1自带一个默认项目集
-            self.assertEqual(1, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 1, ProjectSet.objects.count())
             # 创建project set
             data = self.post(
                 f"/v1/teams/{str(team1.id)}/project-sets",
@@ -1112,23 +1128,27 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
                 token=token1,
             )
             self.assertErrorEqual(data)
-            self.assertEqual(2, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 2, ProjectSet.objects.count())
             set1 = ProjectSet.objects(default=False).first()
             # == 修改项目集 ==
             self.assertEqual("p1", set1.name)
             data = self.put(
-                f"/v1/project-sets/{str(set1.id)}", json={"name": "p11"}, token=token1,
+                f"/v1/project-sets/{str(set1.id)}",
+                json={"name": "p11"},
+                token=token1,
             )
             self.assertErrorEqual(data)
-            self.assertEqual(2, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 2, ProjectSet.objects.count())
             set1.reload()
             self.assertEqual("p11", set1.name)
             # == user2没有权限修改 ==
             data = self.put(
-                f"/v1/project-sets/{str(set1.id)}", json={"name": "p111"}, token=token2,
+                f"/v1/project-sets/{str(set1.id)}",
+                json={"name": "p111"},
+                token=token2,
             )
             self.assertErrorEqual(data, NoPermissionError)
-            self.assertEqual(2, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 2, ProjectSet.objects.count())
             set1.reload()
             self.assertEqual("p11", set1.name)
 
@@ -1140,7 +1160,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             token1 = self.create_user("11", "1@1.com", "111111").generate_token()
             token2 = self.create_user("22", "2@1.com", "111111").generate_token()
             # 初始没有项目集
-            self.assertEqual(0, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 0, ProjectSet.objects.count())
             # 创建一个team
             # 获取默认角色
             member_role = Team.role_cls.by_system_code("beginner")
@@ -1159,7 +1179,7 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             self.assertErrorEqual(data1)
             team1 = Team.objects(id=data1.json["team"]["id"]).first()
             # team1自带一个默认项目集
-            self.assertEqual(1, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 1, ProjectSet.objects.count())
             # 创建project set
             data = self.post(
                 f"/v1/teams/{str(team1.id)}/project-sets",
@@ -1167,16 +1187,16 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
                 token=token1,
             )
             self.assertErrorEqual(data)
-            self.assertEqual(2, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 2, ProjectSet.objects.count())
             set1 = ProjectSet.objects(name="p1").first()
             # == user2没有权限删除项目集 ==
             data = self.delete(f"/v1/project-sets/{str(set1.id)}", token=token2)
             self.assertErrorEqual(data, NoPermissionError)
-            self.assertEqual(2, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 2, ProjectSet.objects.count())
             # == 删除项目集 ==
             data = self.delete(f"/v1/project-sets/{str(set1.id)}", token=token1)
             self.assertErrorEqual(data)
-            self.assertEqual(1, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 1, ProjectSet.objects.count())
             with self.assertRaises(DoesNotExist):
                 set1.reload()
 
@@ -1184,11 +1204,11 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             # == user2没有权限删除默认项目集 ==
             data = self.delete(f"/v1/project-sets/{str(default_set.id)}", token=token2)
             self.assertErrorEqual(data, NoPermissionError)
-            self.assertEqual(1, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 1, ProjectSet.objects.count())
             # == user也不能删除默认项目集，因为默认项目集不能删除 ==
             data = self.delete(f"/v1/project-sets/{str(default_set.id)}", token=token1)
             self.assertErrorEqual(data, NoPermissionError)
-            self.assertEqual(1, ProjectSet.objects.count())
+            self.assertEqual(DEFAULT_PROJECT_SETS_COUNT + 1, ProjectSet.objects.count())
             default_set.reload()
 
     def test_get_team_insight_user_list1(self):
@@ -1312,13 +1332,15 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             token1 = user1.generate_token()
             team1 = Team.create("t1")
             data = self.get(
-                f"/v1/teams/{str(team1.id)}/insight/projects", token=token1,
+                f"/v1/teams/{str(team1.id)}/insight/projects",
+                token=token1,
             )
             self.assertErrorEqual(data, NoPermissionError)
             admin_role = Team.role_cls.by_system_code("admin")
             user1.join(team1, role=admin_role)
             data = self.get(
-                f"/v1/teams/{str(team1.id)}/insight/projects", token=token1,
+                f"/v1/teams/{str(team1.id)}/insight/projects",
+                token=token1,
             )
             self.assertErrorEqual(data)
 
@@ -1330,7 +1352,10 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
         team2 = Team.create("t2", creator=user1)
         Project.create("p1", team=team1)
         Project.create("p2", team=team2)
-        data = self.get(f"/v1/teams/{str(team1.id)}/insight/projects", token=token1,)
+        data = self.get(
+            f"/v1/teams/{str(team1.id)}/insight/projects",
+            token=token1,
+        )
         self.assertErrorEqual(data)
         self.assertEqual(1, len(data.json))
         self.assertEqual("p1", data.json[0]["project"]["name"])
@@ -1409,3 +1434,65 @@ class TeamProjectSetAPITestCase(MoeAPITestCase):
             )
             self.assertErrorEqual(data)
             self.assertEqual(1, len(data.json))
+
+    def test_only_allow_admin_create_team(self):
+        """测试只有管理员才能创建团队"""
+        with self.app.test_request_context():
+            member_role = Team.role_cls.by_system_code("beginner")
+            site_setting = SiteSetting.get()
+            site_setting.only_allow_admin_create_team = True
+            site_setting.save()
+            site_setting.reload()
+            self.assertTrue(site_setting.only_allow_admin_create_team)
+            # 普通用户创建团队失败
+            user1 = self.create_user("u1")
+            user_token1 = user1.generate_token()
+            data = self.post(
+                "/v1/teams",
+                token=user_token1,
+                json={
+                    "name": "t1",
+                    "allow_apply_type": AllowApplyType.NONE,
+                    "application_check_type": ApplicationCheckType.ADMIN_CHECK,
+                    "default_role": str(member_role.id),
+                    "intro": "",
+                },
+            )
+            self.assertErrorEqual(data, OnlyAllowAdminCreateTeamError)
+            self.assertEqual(Team.objects(name="t1").count(), 0)
+            # 管理员创建团队成功
+            admin1 = self.create_user("admin1")
+            admin1.admin = True
+            admin1.save()
+            admin_token1 = admin1.generate_token()
+            data = self.post(
+                "/v1/teams",
+                token=admin_token1,
+                json={
+                    "name": "at1",
+                    "allow_apply_type": AllowApplyType.NONE,
+                    "application_check_type": ApplicationCheckType.ADMIN_CHECK,
+                    "default_role": str(member_role.id),
+                    "intro": "",
+                },
+            )
+            self.assertErrorEqual(data)
+            self.assertEqual(Team.objects(name="at1").count(), 1)
+            # 关闭仅管理员创建团队，普通用户创建团队成功
+            site_setting.only_allow_admin_create_team = False
+            site_setting.save()
+            site_setting.reload()
+            self.assertFalse(site_setting.only_allow_admin_create_team)
+            data = self.post(
+                "/v1/teams",
+                token=user_token1,
+                json={
+                    "name": "t2",
+                    "allow_apply_type": AllowApplyType.NONE,
+                    "application_check_type": ApplicationCheckType.ADMIN_CHECK,
+                    "default_role": str(member_role.id),
+                    "intro": "",
+                },
+            )
+            self.assertErrorEqual(data)
+            self.assertEqual(Team.objects(name="t2").count(), 1)
