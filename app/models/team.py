@@ -13,7 +13,7 @@ from mongoengine import (
     DateTimeField,
 )
 
-from app import oss
+from app import storage
 from app.core.rbac import (
     AllowApplyType,
     GroupMixin,
@@ -302,10 +302,11 @@ class Team(GroupMixin, Document):
 
     @property
     def avatar(self):
+        prefix = storage.getPathType("team_avatar")
         # 没有设置头像时返回默认团队头像
         if self._avatar:
-            return oss.sign_url(
-                current_app.config["OSS_TEAM_AVATAR_PREFIX"], self._avatar
+            return storage.sign_url(
+                prefix, self._avatar
             )
         return current_app.config.get("DEFAULT_TEAM_AVATAR", None)
 

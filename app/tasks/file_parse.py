@@ -13,7 +13,7 @@ from celery.exceptions import MaxRetriesExceededError
 from flask import json
 
 from app import celery
-from app import oss
+from app.services.storage import Storage
 from app.models import connect_db
 from app.constants.file import (
     FileNotExistReason,
@@ -43,9 +43,8 @@ def parse_text_task(file_id, old_revision_id=None):
 
     (Project, Team, User)
     # 配置
-    oss_file_prefix = celery.conf.app_config["OSS_FILE_PREFIX"]
     connect_db(celery.conf.app_config)
-    oss.init(celery.conf.app_config)
+    storage = Storage(celery.conf.app_config)
     # 获取旧修订版
     old_revision = None
     if old_revision_id:
@@ -64,7 +63,8 @@ def parse_text_task(file_id, old_revision_id=None):
         parse_status=ParseStatus.PARSING, parse_start_time=datetime.datetime.utcnow(),
     )
     # 下载文件，并获取内容
-    text_file = oss.download(oss_file_prefix, file.save_name)
+    file_prefix = storage.getPathType("project")
+    text_file = storage.download(file_prefix, file.save_name)
     try:
         text = text_file.read()
     except Exception as e:
@@ -139,9 +139,8 @@ def safe_task(self, file_id):
     region_provider.modify_point(
         "Green", "cn-shanghai", "green.cn-shanghai.aliyuncs.com"
     )
-    oss_file_prefix = celery.conf.app_config["OSS_FILE_PREFIX"]
     connect_db(celery.conf.app_config)
-    oss.init(celery.conf.app_config)
+    storage = Storage(celery.conf.app_config)
     # 获取file
     file = File.objects(id=file_id, type=FileType.IMAGE).first()
     if file is None:
@@ -166,10 +165,11 @@ def safe_task(self, file_id):
     request.set_method("POST")
     request.set_accept_format("JSON")
     # 异步支持多张图片，最多50张
+    file_prefix = storage.getPathType("project")
     tasks = [
         {
             "dataId": str(uuid.uuid1()),
-            "url": oss.sign_url(oss_file_prefix, file.save_name),
+            "url": storage.sign_url(file_prefix, file.save_name),
             "time": datetime.datetime.utcnow().microsecond,
         }
     ]
@@ -227,9 +227,8 @@ def safe_result_task(self, file_id):
     region_provider.modify_point(
         "Green", "cn-shanghai", "green.cn-shanghai.aliyuncs.com"
     )
-    oss_file_prefix = celery.conf.app_config["OSS_FILE_PREFIX"]
     connect_db(celery.conf.app_config)
-    oss.init(celery.conf.app_config)
+    storage = Storage(celery.conf.app_config)
     # 获取file
     file = File.objects(id=file_id, type=FileType.IMAGE).first()
     if file is None:
@@ -265,8 +264,9 @@ def safe_result_task(self, file_id):
                                 )
                             # 确认黄图直接屏蔽
                             elif suggestion == "block":
-                                # 删除oss上文件
-                                oss.delete(oss_file_prefix, file.save_name)
+                                file_prefix = storage.getPathType("project")
+                                # 删除文件
+                                storage.delete(file_prefix, file.save_name)
                                 file.update(
                                     save_name="",
                                     file_not_exist_reason=FileNotExistReason.BLOCK,  # noqa: E501

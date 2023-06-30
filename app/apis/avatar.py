@@ -4,7 +4,7 @@
 from bson import ObjectId
 from flask import current_app, request
 
-from app import oss
+from app import storage
 from app.core.responses import MoePagination
 from app.core.views import MoeAPIView
 from app.decorators.auth import token_required
@@ -29,7 +29,6 @@ from app.validators.project import SearchUserProjectSchema
 from app.models.project import Project
 from app.models.application import Application
 from app.utils.logging import logger
-import oss2
 from app.exceptions.base import NoPermissionError, RequestDataWrongError
 
 
@@ -62,10 +61,10 @@ class AvatarAPI(MoeAPIView):
         if not file:
             raise UploadFileNotFoundError("请选择图片")
         if owner_type == "user":
-            avatar_prefix = current_app.config["OSS_USER_AVATAR_PREFIX"]
+            avatar_prefix = storage.getPathType("user_avatar")
             avatar_owner = self.current_user
         elif owner_type == "team":
-            avatar_prefix = current_app.config["OSS_TEAM_AVATAR_PREFIX"]
+            avatar_prefix = storage.getPathType("team_avatar")
             avatar_owner = Team.by_id(owner_id)
             if not self.current_user.can(avatar_owner, TeamPermission.CHANGE):
                 raise NoPermissionError
@@ -74,15 +73,13 @@ class AvatarAPI(MoeAPIView):
         if owner_type != "user" and owner_id is None:
             raise RequestDataWrongError(lazy_gettext("缺少id"))
         filename = str(ObjectId()) + ".jpg"
-        oss.upload(avatar_prefix, filename, file)
+        storage.upload(avatar_prefix, filename, file)
         # 删除旧的头像
         if avatar_owner.has_avatar():
             try:
-                oss.delete(
+                storage.delete(
                     avatar_prefix, avatar_owner._avatar,
                 )
-            except (oss2.exceptions.NoSuchKey) as e:
-                logger.error(e)
             except (Exception) as e:
                 logger.error(e)
         # 设置新的头像

@@ -21,7 +21,7 @@ from mongoengine import (
     StringField,
 )
 
-from app import oss
+from app import storage
 from app.core.responses import MoePagination
 from app.decorators.file import need_activated, only, only_file
 from app.exceptions import (
@@ -47,6 +47,7 @@ from app.models.target import Target
 from app.models.term import Term
 from app.tasks.file_parse import parse_text, safe
 from app.tasks.ocr import ocr
+from app.tasks.thumbnail import image_thumbnail, remove_thumbnail
 from app.constants.source import SourcePositionType
 from app.constants.file import (
     FileNotExistReason,
@@ -568,21 +569,24 @@ class File(Document):
 
     @property
     def url(self):
+        prefix = storage.getPathType("project")
         if not self.save_name:
             return ""
-        return oss.sign_url(current_app.config["OSS_FILE_PREFIX"], self.save_name)
+        return storage.sign_url(prefix, self.save_name)
 
     @property
     def cover_url(self):
+        prefix = storage.getPathType("thumbnail")
         if not self.save_name:
             return ""
-        return oss.sign_url(current_app.config["OSS_FILE_PREFIX"], self.save_name, process_name=current_app.config["OSS_PROCESS_COVER_NAME"])
+        return storage.sign_url(prefix, self.save_name, process_name=current_app.config.get("OSS_PROCESS_COVER_NAME", ""))
 
     @property
     def safe_check_url(self):
+        prefix = storage.getPathType("project")
         if not self.save_name:
             return ""
-        return oss.sign_url(current_app.config["OSS_FILE_PREFIX"], self.save_name, process_name=current_app.config["OSS_PROCESS_SAFE_CHECK_NAME"])
+        return storage.sign_url(prefix, self.save_name, process_name=current_app.config.get("OSS_PROCESS_SAFE_CHECK_NAME", ""))
 
     @only_file
     def has_real_file(self):
@@ -591,11 +595,11 @@ class File(Document):
     @only_file
     def download_real_file(self, local_path=None):
         """下载源文件"""
-        # 从oss获取源文件
+        prefix = storage.getPathType("project")
         if not self.save_name:
             raise SourceFileNotExist(self.file_not_exist_reason)
-        return oss.download(
-            current_app.config["OSS_FILE_PREFIX"], self.save_name, local_path=local_path
+        return storage.download(
+            prefix, self.save_name, local_path=local_path
         )
 
     @only_file
@@ -619,10 +623,14 @@ class File(Document):
         md5 = get_file_md5(real_file)
         # 文件大小
         file_size = math.ceil(get_file_size(real_file))  # 获取文件大小，去掉小数
-        # 将文件上传到OSS
-        oss_result = oss.upload(
-            current_app.config["OSS_FILE_PREFIX"], save_name, real_file
+        # 存储文件
+        prefix = storage.getPathType("project")
+        oss_result = storage.upload(
+            prefix, save_name, real_file
         )
+        if storage.getStorageType() == "local":
+            # 本地存储时，生成缩略图文件
+            image_thumbnail("project", save_name)
         # 替换原存储名和md5
         self.update(save_name=save_name, md5=md5)
         # 更新文件大小，非激活修订版只更新自身文件大小
@@ -658,10 +666,17 @@ class File(Document):
         """
         # 如果是文件夹则跳过
         if self.has_real_file:
+            prefix = storage.getPathType("project")
             # 物理删除源文件
-            oss_result = oss.delete(
-                current_app.config["OSS_FILE_PREFIX"], self.save_name
-            )
+            try:
+                oss_result = storage.delete(
+                    prefix, self.save_name
+                )
+                if storage.getStorageType() == "local":
+                    remove_thumbnail("project", self.save_name)
+            except PermissionError as e:
+                oss_result = e
+                pass
             # 初始化对象，并更新缓存计数
             if init_obj:
                 self.update(

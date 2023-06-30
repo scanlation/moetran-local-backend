@@ -8,7 +8,8 @@ from typing import BinaryIO, List, Optional
 from uuid import uuid4
 
 import requests
-from app import celery, gs_vision, oss, about_to_shutdown
+from app import celery, gs_vision, about_to_shutdown
+from app.services.storage import Storage
 from app.constants.file import FileType, ImageOCRPercent, ParseErrorType, ParseStatus
 from app.models import connect_db
 from app.tasks import SyncResult
@@ -398,10 +399,11 @@ class ErrorCounts:
 def merge_and_ocr(parsing_images, /, *, parse_alone=False):
     if not parsing_images:
         return
-    oss_file_prefix = celery.conf.app_config["OSS_FILE_PREFIX"]
     image_error_counts = ErrorCounts()
     parsing_alone_images = []
     team = parsing_images[0].project.team
+    storage = Storage(celery.conf.app_config)
+    file_prefix = storage.getPathType("project")
     while len(parsing_images) > 0:
         merged_image_file = None
         merged_images_data = []
@@ -422,8 +424,8 @@ def merge_and_ocr(parsing_images, /, *, parse_alone=False):
                 ):
                     try:
                         image_file = BytesIO(
-                            oss.download(
-                                oss_file_prefix, downloading_image.save_name
+                            storage.download(
+                                file_prefix, downloading_image.save_name
                             ).read()
                         )
                         image_files.append(image_file)
@@ -567,7 +569,6 @@ def ocr_task(type, id):
 
     (Project, Team)
     connect_db(celery.conf.app_config)
-    oss.init(celery.conf.app_config)
     gs_vision.init(celery.conf.app_config)
     project = Project.objects(id=id).first()
     if project is None:

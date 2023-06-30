@@ -16,7 +16,7 @@ from mongoengine import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from app import oss
+from app import storage
 from app.exceptions import (
     ApplicationAlreadyExistError,
     BadTokenError,
@@ -206,9 +206,10 @@ class User(Document):
 
     @property
     def avatar(self):
+        prefix = storage.getPathType("user_avatar")
         if self._avatar:
-            return oss.sign_url(
-                current_app.config["OSS_USER_AVATAR_PREFIX"], self._avatar
+            return storage.sign_url(
+                prefix, self._avatar
             )
         return current_app.config.get("DEFAULT_USER_AVATAR", None)
 

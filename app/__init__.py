@@ -9,7 +9,7 @@ from flask_babel import Babel
 from app.constants.locale import Locale
 from app.core.rbac import AllowApplyType, ApplicationCheckType
 from app.services.google_storage import GoogleStorage
-from app.services.oss import OSS
+from app.services.storage import Storage
 from app.utils.logging import configure_logger, logger
 
 from .apis import register_apis
@@ -20,7 +20,7 @@ FILE_PATH = os.path.abspath(os.path.join(APP_PATH, "..", "files"))  # 一般文�
 TMP_PATH = os.path.abspath(os.path.join(FILE_PATH, "tmp"))  # 临时文件存放地址
 # 插件
 babel = Babel()
-oss = OSS()
+storage = Storage()
 gs_vision = GoogleStorage()
 apikit = APIKit()
 
@@ -102,7 +102,7 @@ def create_app():
 
     logger.info("-" * 50)
     logger.info("站点支持语言: " + str([str(i) for i in babel.list_translations()]))
-    oss.init(app.config)  # 文件储存
+    storage.init(app.config)  # 文件储存
 
     admin_user = create_or_override_default_admin(app)
     create_default_team(admin_user)
@@ -143,11 +143,13 @@ def create_celery():
             "app.tasks.output_project",
             "app.tasks.ocr",
             "app.tasks.import_from_labelplus",
+            "app.tasks.thumbnail"
         ],
         related_name=None,
     )
     celery.conf.task_routes = {
         "tasks.ocr_task": {"queue": "ocr"},
+        "tasks.thumbnail_task": {"queue": "output"},
         "tasks.output_project_task": {"queue": "output"},
         "tasks.import_from_labelplus_task": {"queue": "output"},
     }

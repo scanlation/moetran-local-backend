@@ -9,8 +9,7 @@ from flask import current_app
 from app.utils.logging import logger
 from mongoengine import DateTimeField, Document, IntField, ReferenceField
 from typing import List, TYPE_CHECKING
-import oss2
-from app import oss
+from app import storage
 
 if TYPE_CHECKING:
     from app.models.project import Project
@@ -55,20 +54,16 @@ class Output(Document):
     @classmethod
     def delete_real_files(cls, outputs):
         try:
-            oss.delete(
-                current_app.config["OSS_OUTPUT_PREFIX"],
+            storage.delete(
+                storage.getPathType("output"),
                 [str(output.id) + ".zip" for output in outputs],
             )
-        except (oss2.exceptions.NoSuchKey) as e:
-            logger.error(e)
         except (Exception) as e:
             logger.error(e)
 
     def delete_real_file(self):
         try:
-            oss.delete(current_app.config["OSS_OUTPUT_PREFIX"], str(self.id) + ".zip")
-        except (oss2.exceptions.NoSuchKey) as e:
-            logger.error(e)
+            storage.delete(storage.getPathType("output"), str(self.id) + ".zip")
         except (Exception) as e:
             logger.error(e)
 
@@ -95,14 +90,15 @@ class Output(Document):
             "file_ids_exclude": [str(id) for id in self.file_ids_exclude],
             "create_time": self.create_time.isoformat(),
         }
+        prefix = storage.getPathType("output")
         if self.status == OutputStatus.SUCCEEDED:
             data["link"] = (
-                oss.sign_url(
-                    current_app.config["OSS_OUTPUT_PREFIX"], str(self.id) + ".zip", download=True
+                storage.sign_url(
+                    prefix, str(self.id) + ".zip", download=True
                 )
                 if self.type == OutputTypes.ALL
-                else oss.sign_url(
-                    current_app.config["OSS_OUTPUT_PREFIX"], str(self.id) + ".txt", download=True
+                else storage.sign_url(
+                    prefix, str(self.id) + ".txt", download=True
                 )
             )
         return data

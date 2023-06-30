@@ -2,7 +2,6 @@
 导出项目
 """
 import os
-import oss2
 import shutil
 from zipfile import ZipFile
 
@@ -10,7 +9,7 @@ from app import FILE_PATH, TMP_PATH, celery
 
 from app.constants.output import OutputStatus, OutputTypes
 from app.constants.file import FileType
-from app import oss
+from app.services.storage import Storage
 from app.models import connect_db
 from . import SyncResult
 from celery.utils.log import get_task_logger
@@ -34,9 +33,9 @@ def output_project_task(output_id):
     from app.models.user import User
 
     (File, Project, Team, Target, User)
-    oss_file_prefix = celery.conf.app_config["OSS_FILE_PREFIX"]
     connect_db(celery.conf.app_config)
-    oss.init(celery.conf.app_config)
+    storage = Storage(celery.conf.app_config)
+    output_prefix = storage.getPathType("output")
     # 获取项目
     output: Output = Output.objects(id=output_id).first()
     if output is None:
@@ -96,10 +95,10 @@ def output_project_task(output_id):
         with open(zip_translations_txt_path, "w", encoding="utf-8") as txt:
             txt.write(labelplus)
         if type == OutputTypes.ONLY_TEXT:
-            # 上传txt到oss
+            # 上传txt文件
             with open(zip_translations_txt_path, "rb") as txt:
-                oss.upload(
-                    celery.conf.app_config["OSS_OUTPUT_PREFIX"],
+                storage.upload(
+                    output_prefix,
                     txt_name,
                     txt,
                     headers={"Content-Disposition": "attachment"},
@@ -112,22 +111,17 @@ def output_project_task(output_id):
                 file_ids_include=file_ids_include,
                 file_ids_exclude=file_ids_exclude,
             )
+            file_prefix = storage.getPathType("project")
             for file in files:
                 file_path = os.path.abspath(
                     os.path.join(zip_images_folder_path, file.name)
                 )
                 try:
-                    oss.download(
-                        oss_file_prefix,
+                    storage.download(
+                        file_prefix,
                         file.save_name,
                         local_path=file_path,
                     )
-                except oss2.exceptions.NoSuchKey:
-                    errors += (
-                        f"File {file.name}<{str(file.id)}> is not found in server.\r\n"
-                    )
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
                 except Exception:
                     logger.exception(Exception)
                     errors += f"File {file.name}<{str(file.id)}> download error.\r\n"
@@ -161,10 +155,10 @@ def output_project_task(output_id):
                             file_path, zip_tmp_folder_path
                         )
                         zip_file.write(file_path, file_in_zip_path)
-            # 上传zip到oss
+            # 上传zip
             with open(zip_path, "rb") as zip_file:
-                oss.upload(
-                    celery.conf.app_config["OSS_OUTPUT_PREFIX"],
+                storage.upload(
+                    output_prefix,
                     zip_name,
                     zip_file,
                 )

@@ -4,7 +4,6 @@
 from bson import ObjectId
 from flask import current_app, request
 
-from app import oss
 from app.core.responses import MoePagination
 from app.core.views import MoeAPIView
 from app.decorators.auth import admin_required, token_required
